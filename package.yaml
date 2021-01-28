@@ -1,0 +1,54 @@
+name:                gamer-evolution
+version:             0.1.0.0
+github:              "desophos/gamer-evolution"
+license:             MIT
+author:              "Iris Horowitz"
+maintainer:          "1887450+desophos@users.noreply.github.com"
+copyright:           "2021 Iris Horowitz"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/desophos/gamer-evolution#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- QuickCheck
+- mtl
+
+library:
+  source-dirs: src
+
+_exe-ghc-options: &exe-ghc-options
+  - -threaded
+  - -rtsopts
+  - -with-rtsopts=-N
+  - -Wall
+  - -Wcompat
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wredundant-constraints
+
+executables:
+  gamer-evolution-exe:
+    main:        Main.hs
+    source-dirs: app
+    ghc-options: *exe-ghc-options
+    dependencies:
+    - gamer-evolution
+
+tests:
+  gamer-evolution-test:
+    main:        Spec.hs
+    source-dirs: test
+    ghc-options: *exe-ghc-options
+    dependencies:
+    - gamer-evolution
