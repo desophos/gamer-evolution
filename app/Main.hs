@@ -1,7 +1,7 @@
 module Main where
 
 import Test.QuickCheck
-import Lib
+import Gamer
 import Evolution
 import Util
 

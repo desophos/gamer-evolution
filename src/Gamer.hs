@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Lib
+module Gamer
     ( newPlayers, playGame
     ) where
 
