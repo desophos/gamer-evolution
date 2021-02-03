@@ -8,6 +8,7 @@ import Control.Applicative
 import Test.QuickCheck
 import Util
 
+
 data Agent a = Agent
     { agentId :: !Int
     , agentFitness :: !Int
@@ -28,6 +29,7 @@ withId x i = x { agentId = i }
 withFitness :: Agent a -> Int -> Agent a
 withFitness x i = x { agentFitness = i }
 
+
 -- merges consecutive agents by ID, combining fitness
 -- recommended to sort first
 merge :: [Agent a] -> [Agent a]
@@ -47,6 +49,7 @@ getFitness f =
             in zipWith withFitness players scores ++ flattenFitness rest
     in merge . sort . flattenFitness . matchups2
 
+
 newAgent :: (a -> String) -> (String -> a) -> a -> Agent a
 newAgent enc dec c = Agent
     { agentId = 0
@@ -61,6 +64,7 @@ newPopulation :: Int -> (a -> String) -> (String -> a) -> a -> [Agent a]
 newPopulation n enc dec c =
     let agent = newAgent enc dec c
     in zipWith withId (replicate n agent) (iterate (+1) 0)
+
 
 -- given 2 parent Agents, returns a child Agent whose chromosome is
 crossover :: Agent a -> Agent a -> Gen (Agent a)

@@ -10,22 +10,25 @@ import Test.QuickCheck
 import Evolution
 import Util
 
+
 type Action = Int
 type StateID = Int
+type Game = [Int] -> [Int]
 data TransitionTree s = NextState s | Reactions [TransitionTree s]
     deriving (Eq, Show)
 type StateTransitionTree = TransitionTree StateID
+
 data PlayerState = PlayerState
     { playerAction :: !Action
     , playerTransitions :: !StateTransitionTree
     } deriving (Eq, Show)
 
-type Game = [Int] -> [Int]
 data GameState = GameState
     { gameStates :: ![PlayerState]
     , gameHistories :: ![[Action]]
     , gameScores :: ![Int]
     } deriving (Eq, Show)
+
 
 maxAction :: Action
 maxAction = 1
@@ -84,7 +87,6 @@ randomAction = choose (0, maxAction)
 randomStateID :: Gen StateID
 randomStateID = choose (0, maxState)
 
-
 -- we need a number of recursive calls equal to the number of actions
 -- i.e. number of branches = numActions
 -- cons numActions recursive calls together
@@ -97,14 +99,12 @@ randomStateTransitionTree depth =
         actionBranches n = liftA2 (:) (randomStateTransitionTree (depth-1)) (actionBranches (n-1))
     in Reactions <$> actionBranches numActions
 
-
 -- depth = memory-1
 randomState :: Gen PlayerState
 randomState = do
     playerAction <- randomAction
     playerTransitions <- randomStateTransitionTree (memory-1)
     pure PlayerState{..}
-
 
 randomChromosome :: Gen [PlayerState]
 randomChromosome = vectorOf (maxState+1) randomState
@@ -119,7 +119,6 @@ findTransition (NextState stateID) _ = stateID
 findTransition (Reactions transitions) (lastMove:restMoves) =
     findTransition (transitions !! lastMove) restMoves
 
-
 nextState :: [PlayerState] -> PlayerState -> [Action] -> PlayerState
 nextState states PlayerState{..} opponentHistory =
     states !! findTransition playerTransitions opponentHistory
@@ -131,16 +130,6 @@ stepPlayer chromosome opponentHistory = do
     let next = nextState chromosome oldState opponentHistory
     put next
     return $ playerAction next
-
-
-playGame :: Game -> Int -> [[PlayerState]] -> [Int]
-playGame game n players =
-    let gameStates = map head players
-        actions = map playerAction gameStates
-        gameHistories = map (:[]) actions
-        gameScores = game actions
-    in evalState (stepGame game (n-1) players) GameState{..}
-
 
 stepGame :: Game -> Int -> [[PlayerState]] -> State GameState [Int]
 stepGame _ 0 _ = do
@@ -158,3 +147,11 @@ stepGame game n players = do
                   , gameScores = zipWith (+) gameScores $ game actions
                   }
     stepGame game (n-1) players
+
+playGame :: Game -> Int -> [[PlayerState]] -> [Int]
+playGame game n players =
+    let gameStates = map head players
+        actions = map playerAction gameStates
+        gameHistories = map (:[]) actions
+        gameScores = game actions
+    in evalState (stepGame game (n-1) players) GameState{..}
