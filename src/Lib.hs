@@ -10,6 +10,7 @@ import Control.Applicative
 import Control.Monad.State
 import Test.QuickCheck
 --import Debug.Trace
+import Util
 
 type Action = Int
 type StateID = Int
@@ -41,11 +42,7 @@ memory :: Int
 memory = 1
 
 
-encodeBcd :: Int -> String
-encodeBcd num = showIntAtBase 2 intToDigit num ""
 
-decodeBcd :: ReadS Int
-decodeBcd = readInt 2 (\d -> d `elem` ['0','1']) digitToInt
 
 
 randomAction :: Gen Action
