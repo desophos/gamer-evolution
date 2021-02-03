@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Lib
-    ( encodeBcd, decodeBcd, randomChromosome, playGame
+    ( newPlayers, playGame
     ) where
 
 import Numeric
@@ -10,6 +10,7 @@ import Control.Applicative
 import Control.Monad.State
 import Test.QuickCheck
 --import Debug.Trace
+import Evolution
 import Util
 
 type Action = Int
@@ -110,6 +111,10 @@ randomState = do
 
 randomChromosome :: Gen [PlayerState]
 randomChromosome = vectorOf (maxState+1) randomState
+
+
+newPlayers :: Int -> Gen [Agent [PlayerState]]
+newPlayers n = newPopulation n encodeChromosome decodeChromosome <$> randomChromosome
 
 
 findTransition :: StateTransitionTree -> [Action] -> StateID
