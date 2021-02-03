@@ -4,12 +4,9 @@ module Lib
     ( newPlayers, playGame
     ) where
 
-import Numeric
-import Data.Char
 import Control.Applicative
 import Control.Monad.State
 import Test.QuickCheck
---import Debug.Trace
 import Evolution
 import Util
 
