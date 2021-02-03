@@ -1,0 +1,94 @@
+module Evolution
+    ( Agent(..), newPopulation, reproduce
+    ) where
+
+import GHC.Float.RealFracMethods
+import Data.List
+import Control.Applicative
+import Test.QuickCheck
+import Util
+
+data Agent a = Agent
+    { agentId :: !Int
+    , agentFitness :: !Int
+    , agentChromosome :: !a
+    , agentEncoder :: !(a -> String)
+    , agentDecoder :: !(String -> a)
+    }
+
+instance Eq (Agent a) where
+    x == y = agentId x == agentId y
+instance Ord (Agent a) where
+    x <= y = agentId x <= agentId y
+
+
+withId :: Agent a -> Int -> Agent a
+withId x i = x { agentId = i }
+
+withFitness :: Agent a -> Int -> Agent a
+withFitness x i = x { agentFitness = i }
+
+-- merges consecutive agents by ID, combining fitness
+-- recommended to sort first
+merge :: [Agent a] -> [Agent a]
+merge [] = []
+merge [a] = [a]
+merge (a:b:as) =
+    if a == b
+    then a {agentFitness = agentFitness a + agentFitness b} : merge as
+    else a : merge (b:as)
+
+-- runs a fitness function on a population of agents
+getFitness :: ([a] -> [Int]) -> [Agent a] -> [Agent a]
+getFitness f =
+    let flattenFitness [] = []
+        flattenFitness (players:rest) =
+            let scores = f $ map agentChromosome players
+            in zipWith withFitness players scores ++ flattenFitness rest
+    in merge . sort . flattenFitness . matchups2
+
+newAgent :: (a -> String) -> (String -> a) -> a -> Agent a
+newAgent enc dec c = Agent
+    { agentId = 0
+    , agentFitness = 0
+    , agentChromosome = c
+    , agentEncoder = enc
+    , agentDecoder = dec
+    }
+
+-- returns a population of agents with incremental IDs
+newPopulation :: Int -> (a -> String) -> (String -> a) -> a -> [Agent a]
+newPopulation n enc dec c =
+    let agent = newAgent enc dec c
+    in zipWith withId (replicate n agent) (iterate (+1) 0)
+
+-- given 2 parent Agents, returns a child Agent whose chromosome is
+crossover :: Agent a -> Agent a -> Gen (Agent a)
+crossover x y = newAgent encoder decoder <$> newC where
+    encoder = agentEncoder x
+    decoder = agentDecoder x
+    c = encoder . agentChromosome
+    n = choose (1, length (c x) - 1)
+    part1 = flip take (c x) <$> n
+    part2 = flip drop (c y) <$> n
+    newC = decoder <$> liftA2 (++) part1 part2
+
+-- pSurvive: proportion of the population to survive to the next generation
+-- f: fitness function to determine an Agent's likelihood to reproduce
+-- pop: the population of Agents to reproduce
+-- returns a population with non-surviving Agents replaced
+-- by children produced by genetic crossover
+reproduce :: Double -> ([a] -> [Int]) -> [Agent a] -> Gen [Agent a]
+reproduce pSurvive f pop = (survived ++) <$> births where
+    nSurvive = floorDoubleInt . (*) pSurvive . fromIntegral . length $ pop
+    survived = take nSurvive . sortOn agentFitness . getFitness f $ pop
+    fitPairs xs = zip (map agentFitness xs) (map pure xs)
+    pickFit = frequency . fitPairs
+    omit xs x = filter (\y -> agentId y /= agentId x) xs
+    mate = do
+        x <- pickFit survived
+        y <- pickFit $ survived `omit` x
+        crossover x y
+    nBirth = length pop - nSurvive
+    nextIds = iterate (+1) . agentId . last $ survived
+    births = flip (zipWith withId) nextIds . replicate nBirth <$> mate
