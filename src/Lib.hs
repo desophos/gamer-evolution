@@ -35,14 +35,49 @@ maxAction = 1
 numActions :: Action
 numActions = maxAction + 1
 
+actionBcdLength :: Int
+actionBcdLength = length $ encodeBcd 0 maxAction
+
 maxState :: StateID
 maxState = 7
+
+stateIdBcdLength :: Int
+stateIdBcdLength = length $ encodeBcd 0 maxState
 
 memory :: Int
 memory = 1
 
+stateBcdLength :: Int
+stateBcdLength = actionBcdLength + stateIdBcdLength * numActions * memory
 
 
+encodeTransitions :: StateTransitionTree -> String
+encodeTransitions (NextState i) = encodeBcd stateIdBcdLength i
+encodeTransitions (Reactions ts) = concatMap encodeTransitions ts
+
+decodeTransitions :: String -> StateTransitionTree
+decodeTransitions ts =
+    let buildTree [x] = x
+        buildTree xs = buildTree $ map Reactions $ chunk numActions xs
+    in buildTree $ map (NextState . decodeBcd) $ chunk stateIdBcdLength ts
+
+
+encodeState :: PlayerState -> String
+encodeState PlayerState{..} =
+    encodeBcd actionBcdLength playerAction ++ encodeTransitions playerTransitions
+
+decodeState :: String -> PlayerState
+decodeState s = PlayerState{..} where
+    (action, transitions) = splitAt actionBcdLength s
+    playerAction = decodeBcd action
+    playerTransitions = decodeTransitions transitions
+
+
+encodeChromosome :: [PlayerState] -> String
+encodeChromosome = concatMap encodeState
+
+decodeChromosome :: String -> [PlayerState]
+decodeChromosome = map decodeState . chunk stateBcdLength
 
 
 randomAction :: Gen Action
