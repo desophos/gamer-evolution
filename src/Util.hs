@@ -13,7 +13,7 @@ chunk size xs =
 
 -- True if its args share all elements in any order
 sameMatch :: (Foldable t1, Foldable t2, Eq a) => t1 a -> t2 a -> Bool
-sameMatch xs = all (`elem` xs)
+sameMatch xs ys = all (`elem` xs) ys && all (`elem` ys) xs
 
 -- returns all pairings (combinations) in a list
 matchups2 :: (Eq a) => [a] -> [[a]]
