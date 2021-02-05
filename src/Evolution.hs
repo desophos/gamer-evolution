@@ -37,12 +37,9 @@ mergeAgents = merge f . sort
 
 -- runs a fitness function on a population of agents
 getFitness :: ([a] -> [Int]) -> [Agent a] -> [Agent a]
-getFitness f =
-    let flattenFitness [] = []
-        flattenFitness (players:rest) =
-            let scores = f $ map agentChromosome players
-            in zipWith withFitness players scores ++ flattenFitness rest
-    in merge . sort . flattenFitness . matchups2
+getFitness f = mergeAgents . concatMap applyScores . matchups2
+    where getScores = f . map agentChromosome
+          applyScores xs = zipWith withFitness xs (getScores xs)
 
 
 newAgent :: (a -> String) -> (String -> a) -> a -> Agent a
