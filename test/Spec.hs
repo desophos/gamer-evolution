@@ -1,4 +1,11 @@
-import Test.QuickCheck
+module Main where
+
+import qualified TestUtil as U
+import System.Exit
 
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = do
+    good <- and <$> sequence [U.runTests]
+    if good
+        then exitSuccess
+        else exitFailure
