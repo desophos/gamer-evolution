@@ -25,11 +25,15 @@ mergeAll f xs
     | otherwise = mergeAll f merged
     where merged = merge f xs
 
+-- splits xs into multiple `size`-length lists
 chunk :: Int -> [a] -> [[a]]
 chunk _ [] = []
-chunk size xs =
-    let (y, ys) = splitAt size xs
-    in y : chunk size ys
+chunk size xs
+    | size < 1 = error "Util.chunk size must be >= 1"
+    | size > length xs = error "Util.chunk size must be <= list length"
+    | length xs `rem` size /= 0 = error "Util.chunk size must divide list evenly"
+    | otherwise = y : chunk size ys
+    where (y, ys) = splitAt size xs
 
 -- True if its args share all elements in any order
 sameMatch :: (Foldable t1, Foldable t2, Eq a) => t1 a -> t2 a -> Bool
