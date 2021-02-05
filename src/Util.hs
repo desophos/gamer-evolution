@@ -35,6 +35,12 @@ chunk size xs
     | otherwise = y : chunk size ys
     where (y, ys) = splitAt size xs
 
+-- True if xs contains no duplicates
+unique :: Eq a => [a] -> Bool
+unique [] = True
+unique [_] = True
+unique (x:xs) = notElem x xs && unique xs
+
 -- True if its args share all elements in any order
 sameMatch :: (Foldable t1, Foldable t2, Eq a) => t1 a -> t2 a -> Bool
 sameMatch xs ys = all (`elem` xs) ys && all (`elem` ys) xs
