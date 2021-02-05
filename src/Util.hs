@@ -5,6 +5,26 @@ import Data.List
 import Data.Char
 import Text.Printf
 
+
+-- merges consecutive equal elements
+-- using f as the combining function
+-- recommended to sort first
+-- n.b. if (f x y) == (head xs), then they will be merged together
+merge :: Eq a => (a -> a -> a) -> [a] -> [a]
+merge _ [] = []
+merge _ [x] = [x]
+merge f (x:y:xs) =
+    if x == y
+    then merge f (f x y : xs)
+    else x : merge f (y : xs)
+
+-- continues merging until there's no more to merge
+mergeAll :: Eq a => (a -> a -> a) -> [a] -> [a]
+mergeAll f xs
+    | merged == merge f merged = merged
+    | otherwise = mergeAll f merged
+    where merged = merge f xs
+
 chunk :: Int -> [a] -> [[a]]
 chunk _ [] = []
 chunk size xs =

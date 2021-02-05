@@ -30,15 +30,10 @@ withFitness :: Agent a -> Int -> Agent a
 withFitness x i = x { agentFitness = i }
 
 
--- merges consecutive agents by ID, combining fitness
--- recommended to sort first
-merge :: [Agent a] -> [Agent a]
-merge [] = []
-merge [a] = [a]
-merge (a:b:as) =
-    if a == b
-    then a {agentFitness = agentFitness a + agentFitness b} : merge as
-    else a : merge (b:as)
+-- merges agents by ID, combining fitness
+mergeAgents :: [Agent a] -> [Agent a]
+mergeAgents = merge f . sort
+    where f x y = x {agentFitness = agentFitness x + agentFitness y}
 
 -- runs a fitness function on a population of agents
 getFitness :: ([a] -> [Int]) -> [Agent a] -> [Agent a]
