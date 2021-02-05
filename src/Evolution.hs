@@ -1,11 +1,15 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Evolution
     ( Agent(..), newPopulation, reproduce, mergeAgents
     ) where
 
+import GHC.Generics (Generic)
 import GHC.Float.RealFracMethods
 import Data.List
 import Control.Applicative
 import Test.QuickCheck
+import Generic.Random
 import Util
 
 
@@ -15,12 +19,14 @@ data Agent a = Agent
     , agentChromosome :: !a
     , agentEncoder :: !(a -> String)
     , agentDecoder :: !(String -> a)
-    }
+    } deriving (Generic)
 
 instance Eq (Agent a) where
     x == y = agentId x == agentId y
 instance Ord (Agent a) where
     x <= y = agentId x <= agentId y
+instance (Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
+    arbitrary = genericArbitraryU
 
 
 withId :: Agent a -> Int -> Agent a
