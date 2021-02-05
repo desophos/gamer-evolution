@@ -1,5 +1,5 @@
 module Evolution
-    ( Agent(..), newPopulation, reproduce
+    ( Agent(..), newPopulation, reproduce, mergeAgents
     ) where
 
 import GHC.Float.RealFracMethods
