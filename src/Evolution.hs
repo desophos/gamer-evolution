@@ -38,6 +38,7 @@ instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
         where flip3 f x y z = f z y x
 
 
+-- trivial helper functions
 withId :: Agent a -> Int -> Agent a
 withId x i = x { agentId = i }
 
@@ -51,6 +52,7 @@ mergeAgents = mergeAll f . sort
     where f x y = x {agentFitness = agentFitness x + agentFitness y}
 
 -- runs a fitness function on a population of agents
+-- returns the population with updated agentFitness
 getFitness :: ([a] -> [Int]) -> [Agent a] -> [Agent a]
 getFitness f = mergeAgents . concatMap applyScores . matchups2
     where getScores = f . map agentChromosome
@@ -74,6 +76,7 @@ newPopulation n enc dec c =
 
 
 -- given 2 parent Agents, returns a child Agent whose chromosome is
+-- produced via a simulation of genetic crossover
 crossover :: Agent a -> Agent a -> Gen (Agent a)
 crossover x y = newAgent encoder decoder <$> newC where
     encoder = agentEncoder x
