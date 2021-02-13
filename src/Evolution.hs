@@ -38,7 +38,7 @@ withFitness x i = x { agentFitness = i }
 
 -- merges agents by ID, combining fitness
 mergeAgents :: [Agent a] -> [Agent a]
-mergeAgents = merge f . sort
+mergeAgents = mergeAll f . sort
     where f x y = x {agentFitness = agentFitness x + agentFitness y}
 
 -- runs a fitness function on a population of agents
