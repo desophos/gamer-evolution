@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE RecordWildCards, DeriveGeneric, ScopedTypeVariables #-}
 
 module Evolution
     ( Agent(..), newPopulation, reproduce, mergeAgents
@@ -9,6 +9,7 @@ import GHC.Float.RealFracMethods
 import Data.List
 import Control.Applicative
 import Test.QuickCheck
+import Test.Invariant
 import Generic.Random
 import Util
 
@@ -25,8 +26,16 @@ instance Eq (Agent a) where
     x == y = agentId x == agentId y
 instance Ord (Agent a) where
     x <= y = agentId x <= agentId y
-instance (Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
-    arbitrary = genericArbitraryU
+instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
+    arbitrary = do
+        let agentId = 0
+            agentFitness = 0
+        agentChromosome <- arbitrary :: Gen a
+        agentEncoder <- arbitrary :: Gen (a -> String)
+        agentDecoder <- suchThat (arbitrary :: Gen (String -> a))
+                                 (flip3 inverts agentChromosome agentEncoder)
+        return Agent{..}
+        where flip3 f x y z = f z y x
 
 
 withId :: Agent a -> Int -> Agent a
