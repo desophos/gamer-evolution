@@ -13,10 +13,9 @@ newtype ChunkArgs a = ChunkArgs (Int, [a]) deriving (Eq, Show)
 
 instance Arbitrary a => Arbitrary (ChunkArgs a) where
     arbitrary = do
-        xs <- listOf1 (arbitrary :: Gen a)
+        xs <- listOf1 arbitrary
         let len = length xs
-        n <- suchThat (arbitrary :: Gen Int)
-                      (\y -> y > 0 && y <= len && len `rem` y == 0)
+        n <- arbitrary `suchThat` (\y -> y > 0 && y <= len && len `rem` y == 0)
         return $ ChunkArgs (n, xs)
 
 
