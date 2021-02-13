@@ -83,7 +83,7 @@ crossover x y = newAgent encoder decoder <$> newC where
 reproduce :: Double -> ([a] -> [Int]) -> [Agent a] -> Gen [Agent a]
 reproduce pSurvive f pop = (survived ++) <$> births where
     nSurvive = floorDoubleInt . (*) pSurvive . fromIntegral . length $ pop
-    survived = take nSurvive . sortOn agentFitness . getFitness f $ pop
+    survived = sortOn agentId . take nSurvive . sortOn agentFitness . getFitness f $ pop
     fitPairs xs = zip (map agentFitness xs) (map pure xs)
     pickFit = frequency . fitPairs
     omit xs x = filter (\y -> agentId y /= agentId x) xs
