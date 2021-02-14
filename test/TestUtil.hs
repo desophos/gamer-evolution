@@ -15,7 +15,8 @@ instance Arbitrary a => Arbitrary (ChunkArgs a) where
     arbitrary = do
         xs <- listOf1 arbitrary
         let len = length xs
-        n <- arbitrary `suchThat` (\y -> y > 0 && y <= len && len `rem` y == 0)
+            lenFactors = [i | i <- [1..len], len `mod` i == 0]
+        n <- arbitrary `suchThat` (`elem` lenFactors)
         return $ ChunkArgs (n, xs)
 
 
