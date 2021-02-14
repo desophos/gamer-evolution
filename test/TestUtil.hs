@@ -29,12 +29,10 @@ prop_mergeAllNeighbors xs = do
     return . not . eqNeighbor $ mergeAll f xs
 
 prop_chunkConcats :: Eq a => ChunkArgs a -> Bool
-prop_chunkConcats args = concat `inverts` chunk n $ xs
-    where ChunkArgs (n, xs) = args
+prop_chunkConcats (ChunkArgs (n, xs)) = concat `inverts` chunk n $ xs
 
 prop_chunkUniform :: ChunkArgs a -> Bool
-prop_chunkUniform args = all ((== n) . length) (chunk n xs)
-    where ChunkArgs (n, xs) = args
+prop_chunkUniform (ChunkArgs (n, xs)) = all ((== n) . length) (chunk n xs)
 
 prop_unique :: Ord a => [a] -> Bool
 prop_unique xs = (unique xs && setEq xs) || not (unique xs || setEq xs)
