@@ -1,12 +1,24 @@
 {-# LANGUAGE TemplateHaskell, RecordWildCards #-}
 module TestEvolution where
 
-import Control.Applicative
 import Test.QuickCheck
 import Test.QuickCheck.All()
 import Evolution
 import Util
 import Instances()
+
+
+newtype ReproduceArgs a = ReproduceArgs (Double, [a] -> [Int], [Agent a]) deriving (Show)
+
+instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (ReproduceArgs a) where
+    arbitrary = do
+        p <- arbitrary `suchThat` (\x -> x >= 0 && x <= 1)
+        n <- arbitrary `suchThat` (> 1)
+        agents <- newPop n <$> arbitrary
+        f <- arbitrary `suchThat` (\f -> all ((== 2) . length)
+                                             (map (f . map agentChromosome)
+                                                  (matchups2 agents)))
+        return $ ReproduceArgs (p, f, agents)
 
 
 prop_mergeAgentsUnique :: [Agent a] -> Bool
@@ -44,14 +56,14 @@ prop_newPopulationUniform n agent = uniform agentCommon pop
                     enc = recordApply agentEncoder c
                     dec = recordApply agentDecoder enc
 
-prop_reproduceLength :: Int -> Agent a -> Double -> ([a] -> [Int]) -> Gen Bool
-prop_reproduceLength n agent p f = liftA2 (==) (pure $ length pop) (length <$> reproduce p f pop)
-    where pop = newPop n agent
+prop_reproduceLength :: ReproduceArgs a -> Gen Bool
+prop_reproduceLength (ReproduceArgs (p, f, pop)) =
+    (== length pop) . length <$> reproduce p f matchups2 pop
 
-prop_reproduceIds :: Int -> Agent a -> Double -> ([a] -> [Int]) -> Gen Bool
-prop_reproduceIds n agent p f = fIncreasing agentId <$> reproduce p f pop
-    where pop = newPop n agent
-          fIncreasing :: Ord b => (a -> b) -> [a] -> Bool
+prop_reproduceIds :: ReproduceArgs a -> Gen Bool
+prop_reproduceIds (ReproduceArgs (p, f, pop)) =
+    fIncreasing agentId <$> reproduce p f matchups2 pop
+    where fIncreasing :: Ord b => (a -> b) -> [a] -> Bool
           fIncreasing _ [] = True
           fIncreasing _ [_] = True
           fIncreasing g (x:y:xs) = g x < g y && fIncreasing g (y:xs)
