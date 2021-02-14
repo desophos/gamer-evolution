@@ -52,9 +52,10 @@ mergeAgents = mergeAll f . sort
     where f x y = x {agentFitness = agentFitness x + agentFitness y}
 
 -- runs a fitness function on a population of agents
+-- takes a list of Agent "matchups" to pass to the fitness function
 -- returns the population with updated agentFitness
-getFitness :: ([a] -> [Int]) -> [Agent a] -> [Agent a]
-getFitness f = mergeAgents . concatMap applyScores . matchups2
+getFitness :: ([a] -> [Int]) -> [[Agent a]] -> [Agent a]
+getFitness f = mergeAgents . concatMap applyScores
     where getScores = f . map agentChromosome
           applyScores xs = zipWith withFitness xs (getScores xs)
 
@@ -89,20 +90,21 @@ crossover x y = newAgent encoder decoder <$> newC where
 
 -- pSurvive: proportion of the population to survive to the next generation
 -- f: fitness function to determine an Agent's likelihood to reproduce
+-- matchup: function to generate a list of "matchups" for `f`.
 -- pop: the population of Agents to reproduce
 -- returns a population with non-surviving Agents replaced
 -- by children produced by genetic crossover
-reproduce :: Double -> ([a] -> [Int]) -> [Agent a] -> Gen [Agent a]
-reproduce pSurvive f pop = (survived ++) <$> births where
-    nSurvive = floorDoubleInt . (*) pSurvive . fromIntegral . length $ pop
-    survived = sortOn agentId . take nSurvive . sortOn agentFitness . getFitness f $ pop
-    fitPairs xs = zip (map agentFitness xs) (map pure xs)
-    pickFit = frequency . fitPairs
-    omit xs x = filter (\y -> agentId y /= agentId x) xs
-    mate = do
-        x <- pickFit survived
-        y <- pickFit $ survived `omit` x
-        crossover x y
-    nBirth = length pop - nSurvive
-    nextIds = iterate (+1) . agentId . last $ survived
-    births = flip (zipWith withId) nextIds . replicate nBirth <$> mate
+reproduce :: Double -> ([a] -> [Int]) -> ([Agent a] -> [[Agent a]]) -> [Agent a] -> Gen [Agent a]
+reproduce pSurvive f matchup pop = (survived ++) <$> births
+    where nSurvive = floorDoubleInt . (*) pSurvive . fromIntegral . length $ pop
+          survived = sortOn agentId . take nSurvive . sortOn agentFitness . getFitness f . matchup $ pop
+          fitPairs xs = zip (map agentFitness xs) (map pure xs)
+          pickFit = frequency . fitPairs
+          omit xs x = filter (\y -> agentId y /= agentId x) xs
+          mate = do
+              x <- pickFit survived
+              y <- pickFit $ survived `omit` x
+              crossover x y
+          nBirth = length pop - nSurvive
+          nextIds = iterate (+1) . agentId . last $ survived
+          births = flip (zipWith withId) nextIds . replicate nBirth <$> mate
