@@ -21,17 +21,17 @@ prop_mergeAgentsNoNew xs = all (`elem` xs) (mergeAgents xs)
 newPop :: Int -> Agent a -> [Agent a]
 newPop n Agent{..} = newPopulation n agentEncoder agentDecoder agentChromosome
 
-prop_newPopulationLength :: Int -> Agent a -> Bool
-prop_newPopulationLength n agent = length pop == n
-    where pop = newPop n agent
+prop_newPopulationLength :: NonNegative Int -> Agent a -> Bool
+prop_newPopulationLength n agent = length pop == getNonNegative n
+    where pop = newPop (getNonNegative n) agent
 
-prop_newPopulationIds :: Int -> Agent a -> Bool
+prop_newPopulationIds :: NonNegative Int -> Agent a -> Bool
 prop_newPopulationIds n agent = and $ zipWith (==) (map agentId pop) (iterate (+1) 0)
-    where pop = newPop n agent
+    where pop = newPop (getNonNegative n) agent
 
-prop_newPopulationUniform :: Eq a => Int -> Agent a -> Bool
+prop_newPopulationUniform :: Eq a => NonNegative Int -> Agent a -> Bool
 prop_newPopulationUniform n agent = uniform agentCommon pop
-    where pop = newPop n agent
+    where pop = newPop (getNonNegative n) agent
           uniform :: (a -> a -> Bool) -> [a] -> Bool
           uniform _ [] = True
           uniform f (x:xs) = all (f x) xs && uniform f xs
