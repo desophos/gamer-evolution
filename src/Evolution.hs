@@ -30,10 +30,9 @@ instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
     arbitrary = do
         let agentId = 0
             agentFitness = 0
-        agentChromosome <- arbitrary :: Gen a
-        agentEncoder <- arbitrary :: Gen (a -> String)
-        agentDecoder <- suchThat (arbitrary :: Gen (String -> a))
-                                 (flip3 inverts agentChromosome agentEncoder)
+        agentChromosome <- arbitrary
+        agentEncoder <- arbitrary
+        agentDecoder <- arbitrary `suchThat` flip3 inverts agentChromosome agentEncoder
         return Agent{..}
         where flip3 f x y z = f z y x
 
