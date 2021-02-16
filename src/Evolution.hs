@@ -88,6 +88,7 @@ crossover x y = newAgent encoder decoder <$> newC
           newC = decoder <$> liftA2 (++) part1 part2
 
 -- pSurvive: proportion of the population to survive to the next generation
+--           minimum 2 members
 -- f: fitness function to determine an Agent's likelihood to reproduce
 -- matchup: function to generate a list of "matchups" for `f`.
 -- pop: the population of Agents to reproduce
@@ -95,7 +96,7 @@ crossover x y = newAgent encoder decoder <$> newC
 -- by children produced by genetic crossover
 reproduce :: Double -> ([a] -> [Int]) -> ([Agent a] -> [[Agent a]]) -> [Agent a] -> Gen [Agent a]
 reproduce pSurvive f matchup pop = (survived ++) <$> births
-    where nSurvive = floorDoubleInt . (*) pSurvive . fromIntegral . length $ pop
+    where nSurvive = max 2 . floorDoubleInt . (*) pSurvive . fromIntegral . length $ pop
           survived = sortOn agentId . take nSurvive . sortOn agentFitness . getFitness f . matchup $ pop
           fitPairs xs = zip (map agentFitness xs) (map pure xs)
           pickFit = frequency . fitPairs
