@@ -46,10 +46,10 @@ prop_newPopulationIds n agent = and $ zipWith (==) (map agentId pop) (iterate (+
     where pop = newPop (getNonNegative n) agent
 
 prop_newPopulationUniform :: Eq a => NonNegative Int -> Agent a -> Bool
-prop_newPopulationUniform n agent = uniform agentCommon pop
+prop_newPopulationUniform n agent = uniform agentCommon pop True
     where pop = newPop (getNonNegative n) agent
-          uniform _ [] = True
-          uniform f (x:xs) = all (f x) xs && uniform f xs
+          uniform _ [] acc = acc
+          uniform f (x:xs) acc = uniform f xs (acc && all (f x) xs)
           agentCommon x y = fEq c && fEq enc && fEq dec
               where fEq f = f x == f y
                     recordApply f g z = f z $ g z
