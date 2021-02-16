@@ -24,6 +24,10 @@ instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Re
         return $ ReproduceArgs (p, f, agents)
 
 
+newPop :: Int -> Agent a -> [Agent a]
+newPop n Agent{..} = newPopulation n agentEncoder agentDecoder agentChromosome
+
+
 prop_mergeAgentsUnique :: [Agent a] -> Bool
 prop_mergeAgentsUnique = unique . mergeAgents
 
@@ -32,9 +36,6 @@ prop_mergeAgentsKeepAll xs = all (`elem` mergeAgents xs) xs
 
 prop_mergeAgentsNoNew :: [Agent a] -> Bool
 prop_mergeAgentsNoNew xs = all (`elem` xs) (mergeAgents xs)
-
-newPop :: Int -> Agent a -> [Agent a]
-newPop n Agent{..} = newPopulation n agentEncoder agentDecoder agentChromosome
 
 prop_newPopulationLength :: NonNegative Int -> Agent a -> Bool
 prop_newPopulationLength n agent = length pop == getNonNegative n
