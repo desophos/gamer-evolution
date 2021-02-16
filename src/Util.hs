@@ -21,9 +21,10 @@ merge f xs = mergeF xs []
 
 -- continues merging until there's no more to merge
 mergeAll :: Eq a => (a -> a -> a) -> [a] -> [a]
-mergeAll f xs
-    | merged == merge f merged = merged
-    | otherwise = mergeAll f merged
+mergeAll f xs =
+    if merged == merge f merged
+        then merged
+        else mergeAll f merged
     where merged = merge f xs
 
 -- splits xs into multiple `size`-length lists
@@ -40,7 +41,7 @@ chunk size xs
 unique :: Eq a => [a] -> Bool
 unique [] = True
 unique [_] = True
-unique (x:xs) = notElem x xs && unique xs
+unique (x:xs) = x `notElem` xs && unique xs
 
 -- True if its args share all elements in any order
 sameMatch :: (Foldable t1, Foldable t2, Eq a) => t1 a -> t2 a -> Bool
