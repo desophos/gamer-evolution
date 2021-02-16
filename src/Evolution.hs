@@ -106,5 +106,5 @@ reproduce pSurvive f matchup pop = (survived ++) <$> births
               y <- pickFit $ survived `omit` x
               crossover x y
           nBirth = length pop - nSurvive
-          nextIds = iterate (+1) . agentId . last $ survived
+          nextIds = iterate (+1) . (+1) . agentId . last $ survived
           births = flip (zipWith withId) nextIds . replicate nBirth <$> mate
