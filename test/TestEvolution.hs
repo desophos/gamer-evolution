@@ -63,11 +63,10 @@ prop_reproduceLength (ReproduceArgs (p, f, pop)) =
 
 prop_reproduceIds :: ReproduceArgs a -> Gen Bool
 prop_reproduceIds (ReproduceArgs (p, f, pop)) =
-    fIncreasing agentId <$> reproduce p f matchups2 pop
-    where fIncreasing :: Ord b => (a -> b) -> [a] -> Bool
-          fIncreasing _ [] = True
-          fIncreasing _ [_] = True
-          fIncreasing g (x:y:xs) = g x < g y && fIncreasing g (y:xs)
+    fIncreasing True agentId <$> reproduce p f matchups2 pop
+    where fIncreasing acc _ [] = acc
+          fIncreasing acc _ [_] = acc
+          fIncreasing acc g (x:y:xs) = fIncreasing (acc && g x < g y) g (y:xs)
 
 
 return []
