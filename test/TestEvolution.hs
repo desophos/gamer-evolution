@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, RecordWildCards #-}
 module TestEvolution where
 
+import Data.Typeable
 import Test.QuickCheck
 import Test.QuickCheck.All()
 import Evolution
@@ -10,12 +11,14 @@ import Instances()
 
 newtype ReproduceArgs a = ReproduceArgs (Double, [a] -> [Int], [Agent a]) deriving (Show)
 
-instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (ReproduceArgs a) where
+instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (ReproduceArgs a) where
     arbitrary = do
         p <- arbitrary `suchThat` (\x -> x >= 0 && x <= 1)
         n <- arbitrary `suchThat` (> 1)
         agents <- newPop n <$> arbitrary
-        f <- arbitrary `suchThat` (\f -> all ((== 2) . length)
+        -- generate a fitness fn that preserves list length and produces fitness > 0
+        f <- arbitrary `suchThat` (\f -> all (\xs -> length xs == 2
+                                                  && all (> 0) xs)
                                              (map (f . map agentChromosome)
                                                   (matchups2 agents)))
         return $ ReproduceArgs (p, f, agents)
