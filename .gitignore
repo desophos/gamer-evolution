@@ -2,4 +2,6 @@
 *.cabal
 *~
 *.sublime-*
+*.code-*
+.vscode
 *.prof
