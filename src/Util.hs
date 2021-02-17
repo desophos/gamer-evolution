@@ -1,9 +1,10 @@
 module Util where
 
-import           Data.Char
-import           Data.List
-import           Numeric
-import           Text.Printf
+import           Data.Char                      ( digitToInt )
+import           Data.List                      ( nubBy )
+import           GHC.List                       ( foldl1' )
+import           Numeric                        ( readInt )
+import           Text.Printf                    ( printf )
 
 
 -- merges consecutive equal elements

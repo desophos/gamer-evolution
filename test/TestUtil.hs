@@ -1,12 +1,25 @@
 {-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-}
 module TestUtil where
 
-import           Data.List
+import           Data.List                      ( sort )
 import qualified Data.Set                      as Set
-import           Test.Invariant
-import           Test.QuickCheck
+import           Test.Invariant                 ( inverts )
+import           Test.QuickCheck                ( Arbitrary(arbitrary)
+                                                , CoArbitrary
+                                                , Gen
+                                                , listOf1
+                                                , quickCheckAll
+                                                , suchThat
+                                                )
 import           Test.QuickCheck.All            ( )
-import           Util
+import           Util                           ( chunk
+                                                , decodeBcd
+                                                , encodeBcd
+                                                , matchups2
+                                                , mergeAll
+                                                , sameMatch
+                                                , unique
+                                                )
 
 
 newtype ChunkArgs a = ChunkArgs (Int, [a]) deriving (Eq, Show)

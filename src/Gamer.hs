@@ -5,11 +5,23 @@ module Gamer
     , playGame
     ) where
 
-import           Control.Applicative
-import           Control.Monad.State
-import           Evolution
-import           Test.QuickCheck
-import           Util
+import           Control.Applicative            ( Applicative(liftA2) )
+import           Control.Monad.State            ( MonadState(get, put)
+                                                , State
+                                                , evalState
+                                                , runState
+                                                )
+import           Evolution                      ( Agent
+                                                , newPopulation
+                                                )
+import           Test.QuickCheck                ( Gen
+                                                , choose
+                                                , vectorOf
+                                                )
+import           Util                           ( chunk
+                                                , decodeBcd
+                                                , encodeBcd
+                                                )
 
 
 type Action = Int

@@ -2,7 +2,11 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Instances where
 
-import           Data.Typeable
+import           Data.Typeable                  ( Proxy(..)
+                                                , Typeable
+                                                , showsTypeRep
+                                                , typeRep
+                                                )
 import           Evolution                      ( Agent(..) )
 
 instance (Typeable a, Typeable b) => Show (a -> b) where

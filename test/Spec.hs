@@ -1,6 +1,8 @@
 module Main where
 
-import           System.Exit
+import           System.Exit                    ( exitFailure
+                                                , exitSuccess
+                                                )
 import qualified TestEvolution                 as E
 import qualified TestUtil                      as U
 

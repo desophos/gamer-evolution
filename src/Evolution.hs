@@ -7,13 +7,21 @@ module Evolution
     , mergeAgents
     ) where
 
-import           Control.Applicative
-import           Data.List
-import           GHC.Float.RealFracMethods
+import           Control.Applicative            ( Applicative(liftA2) )
+import           Data.List                      ( sort
+                                                , sortOn
+                                                )
+import           GHC.Float.RealFracMethods      ( floorDoubleInt )
 import           GHC.Generics                   ( Generic )
-import           Test.Invariant
-import           Test.QuickCheck
-import           Util
+import           Test.Invariant                 ( inverts )
+import           Test.QuickCheck                ( Arbitrary(arbitrary)
+                                                , CoArbitrary
+                                                , Gen
+                                                , choose
+                                                , frequency
+                                                , suchThat
+                                                )
+import           Util                           ( mergeAll )
 
 
 data Agent a = Agent

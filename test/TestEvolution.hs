@@ -1,12 +1,25 @@
 {-# LANGUAGE TemplateHaskell, RecordWildCards #-}
 module TestEvolution where
 
-import           Data.Typeable
-import           Evolution
+import           Data.Typeable                  ( Typeable )
+import           Evolution                      ( Agent(..)
+                                                , mergeAgents
+                                                , newPopulation
+                                                , reproduce
+                                                )
 import           Instances                      ( )
-import           Test.QuickCheck
+import           Test.QuickCheck                ( Arbitrary(arbitrary)
+                                                , CoArbitrary
+                                                , Gen
+                                                , NonNegative(getNonNegative)
+                                                , quickCheckAll
+                                                , suchThat
+                                                )
 import           Test.QuickCheck.All            ( )
-import           Util
+import           Util                           ( combineWith
+                                                , matchups2
+                                                , unique
+                                                )
 
 
 newtype ReproduceArgs a = ReproduceArgs (Double, [a] -> [Int], [Agent a]) deriving (Show)
