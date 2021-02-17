@@ -13,16 +13,18 @@ newtype ReproduceArgs a = ReproduceArgs (Double, [a] -> [Int], [Agent a]) derivi
 
 instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (ReproduceArgs a) where
     arbitrary = do
-        p      <- arbitrary `suchThat` (\x -> x >= 0 && x <= 1)
+        p      <- arbitrary `suchThat` combineWith (&&) [(>= 0), (<= 1)]
         n      <- arbitrary `suchThat` (> 1)
         agents <- newPop n <$> arbitrary
         -- generate a fitness fn that preserves list length and produces fitness > 0
         f      <-
             arbitrary
                 `suchThat` (\f -> all
-                               (\xs -> length xs == 2 && all (> 0) xs)
-                               (map (f . map agentChromosome) (matchups2 agents)
+                               ( combineWith (&&) [(2 ==) . length, all (> 0)]
+                               . f
+                               . map agentChromosome
                                )
+                               (matchups2 agents)
                            )
         return $ ReproduceArgs (p, f, agents)
 

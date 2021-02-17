@@ -58,3 +58,9 @@ encodeBcd = printf "%0*b"
 -- given a string of binary digits, returns the number as a decimal Int
 decodeBcd :: String -> Int
 decodeBcd = fst . head . readInt 2 (`elem` ['0', '1']) digitToInt
+
+-- apply a list of functions to the same input
+-- and combine their outputs
+combineWith :: (b -> b -> b) -> [a -> b] -> a -> b
+combineWith _       [] _ = error "Util.combineWith requires a list of functions"
+combineWith combine fs x = foldl1' combine $ map ($ x) fs
