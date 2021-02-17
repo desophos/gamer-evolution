@@ -31,14 +31,14 @@ instance Ord (Agent a) where
     x <= y = agentId x <= agentId y
 instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
     arbitrary = do
-        let agentId      = 0
+        let flip3 f x y z = f z y x
+            agentId      = 0
             agentFitness = 0
         agentChromosome <- arbitrary
         agentEncoder    <- arbitrary
         agentDecoder    <-
             arbitrary `suchThat` flip3 inverts agentChromosome agentEncoder
         return Agent { .. }
-        where flip3 f x y z = f z y x
 
 
 -- trivial helper functions
