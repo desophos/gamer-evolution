@@ -1,12 +1,10 @@
 module Main where
 
-import qualified TestUtil as U
-import qualified TestEvolution as E
-import System.Exit
+import           System.Exit
+import qualified TestEvolution                 as E
+import qualified TestUtil                      as U
 
 main :: IO ()
 main = do
     good <- and <$> sequence [U.runTests, E.runTests]
-    if good
-        then exitSuccess
-        else exitFailure
+    if good then exitSuccess else exitFailure

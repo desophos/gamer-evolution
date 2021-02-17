@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-}
 module TestUtil where
 
-import qualified Data.Set as Set
-import Data.List
-import Test.QuickCheck
-import Test.QuickCheck.All()
-import Test.Invariant
-import Util
+import           Data.List
+import qualified Data.Set                      as Set
+import           Test.Invariant
+import           Test.QuickCheck
+import           Test.QuickCheck.All            ( )
+import           Util
 
 
 newtype ChunkArgs a = ChunkArgs (Int, [a]) deriving (Eq, Show)
@@ -14,17 +14,17 @@ newtype ChunkArgs a = ChunkArgs (Int, [a]) deriving (Eq, Show)
 instance Arbitrary a => Arbitrary (ChunkArgs a) where
     arbitrary = do
         xs <- listOf1 arbitrary
-        let len = length xs
-            lenFactors = [i | i <- [1..len], len `mod` i == 0]
+        let len        = length xs
+            lenFactors = [ i | i <- [1 .. len], len `mod` i == 0 ]
         n <- arbitrary `suchThat` (`elem` lenFactors)
         return $ ChunkArgs (n, xs)
 
 
 prop_mergeAllNeighbors :: (Eq a, Arbitrary a, CoArbitrary a) => [a] -> Gen Bool
 prop_mergeAllNeighbors xs = do
-    let eqNeighbor [] = False
-        eqNeighbor [_] = False
-        eqNeighbor (x:y:ys) = x == y || eqNeighbor (y:ys)
+    let eqNeighbor []           = False
+        eqNeighbor [_         ] = False
+        eqNeighbor (x : y : ys) = x == y || eqNeighbor (y : ys)
     f <- arbitrary
     return . not . eqNeighbor $ mergeAll f xs
 

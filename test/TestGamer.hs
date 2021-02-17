@@ -1,9 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 module TestGamer where
 
-import Test.QuickCheck.All
-import Test.Invariant
-import Gamer
+import           Gamer
+import           Test.Invariant
+import           Test.QuickCheck.All
 
 
 
