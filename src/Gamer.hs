@@ -60,10 +60,10 @@ encodeTransitions (NextState i ) = encodeBcd stateIdBcdLength i
 encodeTransitions (Reactions ts) = concatMap encodeTransitions ts
 
 decodeTransitions :: String -> StateTransitionTree
-decodeTransitions ts =
+decodeTransitions =
     let buildTree [x] = x
-        buildTree xs  = buildTree $ map Reactions $ chunk numActions xs
-    in  buildTree $ map (NextState . decodeBcd) $ chunk stateIdBcdLength ts
+        buildTree xs  = buildTree . map Reactions . chunk numActions $ xs
+    in  buildTree . map (NextState . decodeBcd) . chunk stateIdBcdLength
 
 
 encodeState :: PlayerState -> String
