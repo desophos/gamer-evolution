@@ -3,6 +3,7 @@ module TestEvolution where
 
 import           Data.Typeable                  ( Typeable )
 import           Evolution                      ( Agent(..)
+                                                , evolve
                                                 , mergeAgents
                                                 , newPopulation
                                                 , reproduce
@@ -12,6 +13,8 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , CoArbitrary
                                                 , Gen
                                                 , NonNegative(getNonNegative)
+                                                , NonPositive(getNonPositive)
+                                                , Positive(getPositive)
                                                 , quickCheckAll
                                                 , suchThat
                                                 )
@@ -91,6 +94,18 @@ prop_reproduceIds (ReproduceArgs (p, f, pop)) =
     fIncreasing acc _ []           = acc
     fIncreasing acc _ [_         ] = acc
     fIncreasing acc g (x : y : xs) = fIncreasing (acc && g x < g y) g (y : xs)
+
+prop_evolveId :: ReproduceArgs a -> NonPositive Int -> Gen Bool
+prop_evolveId (ReproduceArgs (p, f, pop)) n =
+    (pop ==) <$> evolve p f matchups2 pop (getNonPositive n)
+
+prop_evolvePreserve :: ReproduceArgs a -> Positive Int -> Gen Bool
+prop_evolvePreserve (ReproduceArgs (p, f, pop)) n = do
+    pop' <- evolve p f matchups2 pop (getPositive n)
+    let args' = ReproduceArgs (p, f, pop')
+    len <- prop_reproduceLength args'
+    ids <- prop_reproduceIds args'
+    return $ len && ids
 
 
 return []

@@ -4,6 +4,7 @@ module Evolution
     ( Agent(..)
     , newPopulation
     , reproduce
+    , evolve
     , mergeAgents
     ) where
 
@@ -137,3 +138,15 @@ reproduce pSurvive f matchup pop = (survived ++) <$> births
     nBirth  = length pop - nSurvive
     nextIds = iterate (+ 1) . (+ 1) . agentId . last $ survived
     births  = flip (zipWith withId) nextIds . replicate nBirth <$> mate
+
+evolve
+    :: Double
+    -> ([a] -> [Int])
+    -> ([Agent a] -> [[Agent a]])
+    -> [Agent a]
+    -> Int
+    -> Gen [Agent a]
+evolve pSurvive f matchup pop = evolve' (pure pop)
+  where
+    reproduce' = reproduce pSurvive f matchup
+    evolve' xs n = if n <= 0 then xs else evolve' (reproduce' =<< xs) (n - 1)
