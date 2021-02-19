@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell, RecordWildCards, ScopedTypeVariables #-}
 module TestEvolution where
 
 import           Data.Typeable                  ( Typeable )
@@ -31,18 +31,11 @@ instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Re
     arbitrary = do
         p      <- arbitrary `suchThat` combineWith (&&) [(>= 0), (<= 1)]
         n      <- arbitrary `suchThat` (> 1)
-        -- generate a fitness fn that preserves list length and produces fitness > 0
-        f      <-
-            arbitrary
-                `suchThat` (\f -> all
-                               ( combineWith (&&) [(2 ==) . length, all (> 0)]
-                               . f
-                               . map agentChromosome
-                               )
-                               (matchups2 agents)
-                           )
-        return $ ReproduceArgs (p, f, agents)
         agents <- newPop n =<< arbitrary
+        -- generate a fitness fn that strictly increases fitness
+        -- fitness starts at 0 so this also guarantees fitness will be > 0
+        f      <- (arbitrary :: Gen (a -> Positive Int))
+        return $ ReproduceArgs (p, map (getPositive . f), agents)
 
 
 newPop :: (Arbitrary a) => Int -> Agent a -> Gen [Agent a]
