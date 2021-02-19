@@ -131,7 +131,7 @@ randomChromosome = vectorOf (maxState + 1) randomState
 
 newPlayers :: Int -> Gen [Agent [PlayerState]]
 newPlayers n =
-    newPopulation n encodeChromosome decodeChromosome <$> randomChromosome
+    newPopulation n encodeChromosome decodeChromosome randomChromosome
 
 
 findTransition :: StateTransitionTree -> [Action] -> StateID

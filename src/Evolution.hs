@@ -20,6 +20,7 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , choose
                                                 , frequency
                                                 , suchThat
+                                                , vectorOf
                                                 )
 import           Util                           ( mergeAll )
 
@@ -81,10 +82,12 @@ newAgent enc dec c = Agent { agentId         = 0
                            }
 
 -- returns a population of agents with incremental IDs
-newPopulation :: Int -> (a -> String) -> (String -> a) -> a -> [Agent a]
-newPopulation n enc dec c =
-    let agent = newAgent enc dec c
-    in  zipWith withId (replicate n agent) (iterate (+ 1) 0)
+newPopulation
+    :: Int -> (a -> String) -> (String -> a) -> Gen a -> Gen [Agent a]
+newPopulation n enc dec c = do
+    let agent = newAgent enc dec <$> c
+    agents <- vectorOf n agent
+    return $ zipWith withId agents (iterate (+ 1) 0)
 
 
 -- given 2 parent Agents, returns a child Agent whose chromosome is

@@ -28,7 +28,6 @@ instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Re
     arbitrary = do
         p      <- arbitrary `suchThat` combineWith (&&) [(>= 0), (<= 1)]
         n      <- arbitrary `suchThat` (> 1)
-        agents <- newPop n <$> arbitrary
         -- generate a fitness fn that preserves list length and produces fitness > 0
         f      <-
             arbitrary
@@ -40,11 +39,11 @@ instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Re
                                (matchups2 agents)
                            )
         return $ ReproduceArgs (p, f, agents)
+        agents <- newPop n =<< arbitrary
 
 
-newPop :: Int -> Agent a -> [Agent a]
-newPop n Agent {..} = newPopulation n agentEncoder agentDecoder agentChromosome
-
+newPop :: (Arbitrary a) => Int -> Agent a -> Gen [Agent a]
+newPop n Agent {..} = newPopulation n agentEncoder agentDecoder arbitrary
 
 prop_mergeAgentsUnique :: [Agent a] -> Bool
 prop_mergeAgentsUnique = unique . mergeAgents
@@ -55,32 +54,35 @@ prop_mergeAgentsKeepAll xs = all (`elem` mergeAgents xs) xs
 prop_mergeAgentsNoNew :: [Agent a] -> Bool
 prop_mergeAgentsNoNew xs = all (`elem` xs) (mergeAgents xs)
 
-prop_newPopulationLength :: NonNegative Int -> Agent a -> Bool
-prop_newPopulationLength n agent = length pop == getNonNegative n
-    where pop = newPop (getNonNegative n) agent
+prop_newPopulationLength
+    :: Arbitrary a => NonNegative Int -> Agent a -> Gen Bool
+prop_newPopulationLength n agent = do
+    pop <- newPop (getNonNegative n) agent
+    return $ length pop == getNonNegative n
 
-prop_newPopulationIds :: NonNegative Int -> Agent a -> Bool
-prop_newPopulationIds n agent = and
-    $ zipWith (==) (map agentId pop) (iterate (+ 1) 0)
-    where pop = newPop (getNonNegative n) agent
+prop_newPopulationIds :: Arbitrary a => NonNegative Int -> Agent a -> Gen Bool
+prop_newPopulationIds n agent = do
+    pop <- newPop (getNonNegative n) agent
+    return . and $ zipWith (==) (map agentId pop) (iterate (+ 1) 0)
 
-prop_newPopulationUniform :: Eq a => NonNegative Int -> Agent a -> Bool
-prop_newPopulationUniform n agent = uniform agentCommon pop True
+prop_newPopulationUniform
+    :: (Eq a, Arbitrary a) => NonNegative Int -> Agent a -> a -> Gen Bool
+prop_newPopulationUniform n agent c = do
+    pop <- newPop (getNonNegative n) agent
+    return $ uniform agentCommon pop True
   where
-    pop = newPop (getNonNegative n) agent
     uniform _ []       acc = acc
     uniform f (x : xs) acc = uniform f xs (acc && all (f x) xs)
-    agentCommon x y = fEq c && fEq enc && fEq dec
+    agentCommon x y = fEq enc && fEq dec
       where
         fEq f = f x == f y
-        recordApply f g z = f z $ g z
-        c   = agentChromosome
-        enc = recordApply agentEncoder c
-        dec = recordApply agentDecoder enc
+        enc z = agentEncoder z c
+        dec z = agentDecoder z $ enc z
 
 prop_reproduceLength :: ReproduceArgs a -> Gen Bool
-prop_reproduceLength (ReproduceArgs (p, f, pop)) =
-    (== length pop) . length <$> reproduce p f matchups2 pop
+prop_reproduceLength (ReproduceArgs (p, f, pop)) = do
+    pop' <- reproduce p f matchups2 pop
+    return $ length pop == length pop'
 
 prop_reproduceIds :: ReproduceArgs a -> Gen Bool
 prop_reproduceIds (ReproduceArgs (p, f, pop)) =
