@@ -16,6 +16,7 @@ import           Control.Monad.State            ( MonadState(get, put)
 import           Evolution                      ( Agent
                                                 , newPopulation
                                                 )
+import           Test.Invariant                 ( inverts )
 import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , Gen
                                                 , choose
@@ -78,12 +79,22 @@ bcdLen :: Int -> Int
 bcdLen = length . encodeBcd 0 . subtract 1
 
 
+prop_encodedLen :: GamerParams -> Gen Bool
+prop_encodedLen params@GamerParams {..} = do
+    tree <- randomStateTransitionTree params
+    let encoded = encodeTransitions params tree
+    return $ 0 == length encoded `rem` bcdLen gamerStates
+
+-- prop> \(params :: GamerParams) -> prop_encodedLen params
+-- +++ OK, passed 100 tests.
 encodeTransitions :: GamerParams -> StateTransitionTree -> String
 encodeTransitions GamerParams {..} (NextState i) =
     encodeBcd (bcdLen gamerStates) i
 encodeTransitions params (Reactions ts) =
     concatMap (encodeTransitions params) ts
 
+-- prop> \(params :: GamerParams) -> (decodeTransitions params) `inverts` (encodeTransitions params) <$> randomStateTransitionTree params
+-- +++ OK, passed 100 tests.
 decodeTransitions :: GamerParams -> String -> StateTransitionTree
 decodeTransitions GamerParams {..} =
     let buildTree xs = if length xs == gamerActions
@@ -96,15 +107,28 @@ encodeState params@GamerParams {..} PlayerState {..} =
     encodeBcd (bcdLen gamerActions) stateAction
         ++ encodeTransitions params stateTransitions
 
+-- prop> \(params :: GamerParams) -> (decodeState params) `inverts` (encodeState params) <$> randomState params
+-- +++ OK, passed 100 tests.
 decodeState :: GamerParams -> String -> PlayerState
 decodeState params@GamerParams {..} s = PlayerState { .. }  where
     (action, transitions) = splitAt (bcdLen gamerActions) s
     stateAction           = decodeBcd action
     stateTransitions      = decodeTransitions params transitions
 
+prop_encodeUniformLen :: GamerParams -> Gen Bool
+prop_encodeUniformLen params = do
+    let encodedLen =
+            length . encodeChromosome params <$> randomChromosome params
+    cs <- vectorOf 20 encodedLen
+    return $ all (head cs ==) cs
+
+-- prop> \(params :: GamerParams) -> prop_encodeUniformLen params
+-- +++ OK, passed 100 tests.
 encodeChromosome :: GamerParams -> [PlayerState] -> String
 encodeChromosome params = concatMap (encodeState params)
 
+-- prop> \(params :: GamerParams) -> (decodeChromosome params) `inverts` (encodeChromosome params) <$> randomChromosome params
+-- +++ OK, passed 100 tests.
 decodeChromosome :: GamerParams -> String -> [PlayerState]
 decodeChromosome params@GamerParams {..} = map (decodeState params)
     . chunk stateBcdLen
@@ -113,6 +137,15 @@ decodeChromosome params@GamerParams {..} = map (decodeState params)
         bcdLen gamerActions + bcdLen gamerStates * gamerActions ^ gamerMemory
 
 
+prop_treeUniform :: GamerParams -> Gen Bool
+prop_treeUniform params@GamerParams {..} = do
+    let uniform (NextState _ ) = True
+        uniform (Reactions xs) = length xs == gamerActions && all uniform xs
+    tree <- randomStateTransitionTree params
+    return $ uniform tree
+
+-- prop> \(params :: GamerParams) -> prop_treeUniform params
+-- +++ OK, passed 100 tests.
 randomStateTransitionTree :: GamerParams -> Gen StateTransitionTree
 randomStateTransitionTree GamerParams {..} = f (gamerMemory - 1)
   where
