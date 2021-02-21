@@ -1,7 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Gamer
-    ( newPlayers
+    ( GamerParams(..)
+    , newPlayers
     , playGame
     , dilemma
     ) where
@@ -15,7 +16,8 @@ import           Control.Monad.State            ( MonadState(get, put)
 import           Evolution                      ( Agent
                                                 , newPopulation
                                                 )
-import           Test.QuickCheck                ( Gen
+import           Test.QuickCheck                ( Arbitrary(arbitrary)
+                                                , Gen
                                                 , choose
                                                 , vectorOf
                                                 )
@@ -25,114 +27,36 @@ import           Util                           ( chunk
                                                 )
 
 
-type Action = Int
-type StateID = Int
-type Game = [Int] -> [Int]
-data TransitionTree s = NextState s | Reactions [TransitionTree s]
+data GamerParams = GamerParams
+    { gamerActions :: !Int -- ^ number of possible actions a player can take
+    , gamerStates  :: !Int -- ^ number of states in a player's chromosome
+    , gamerMemory  :: !Int -- ^ how many rounds back a player will remember its opponent's actions
+    }
     deriving (Eq, Show)
-type StateTransitionTree = TransitionTree StateID
+
+instance Arbitrary GamerParams where
+    arbitrary = do
+        gamerActions <- choose (2, 8)
+        gamerStates  <- (2 ^) <$> choose (1, 6 :: Int)
+        gamerMemory  <- choose (1, 3)
+        return GamerParams { .. }
+
+data TransitionTree a = NextState a | Reactions [TransitionTree a]
+    deriving (Eq, Show)
+type StateTransitionTree = TransitionTree Int
 
 data PlayerState = PlayerState
-    { playerAction      :: !Action
-    , playerTransitions :: !StateTransitionTree
+    { stateAction      :: !Int
+    , stateTransitions :: !StateTransitionTree
     }
     deriving (Eq, Show)
 
 data GameState = GameState
     { gameStates    :: ![PlayerState]
-    , gameHistories :: ![[Action]]
+    , gameHistories :: ![[Int]]
     , gameScores    :: ![Int]
     }
     deriving (Eq, Show)
-
-
-maxAction :: Action
-maxAction = 1
-
-numActions :: Action
-numActions = maxAction + 1
-
-actionBcdLength :: Int
-actionBcdLength = length $ encodeBcd 0 maxAction
-
-maxState :: StateID
-maxState = 7
-
-stateIdBcdLength :: Int
-stateIdBcdLength = length $ encodeBcd 0 maxState
-
-memory :: Int
-memory = 1
-
-stateBcdLength :: Int
-stateBcdLength = actionBcdLength + stateIdBcdLength * numActions * memory
-
-
-encodeTransitions :: StateTransitionTree -> String
-encodeTransitions (NextState i ) = encodeBcd stateIdBcdLength i
-encodeTransitions (Reactions ts) = concatMap encodeTransitions ts
-
-decodeTransitions :: String -> StateTransitionTree
-decodeTransitions =
-    let buildTree [x] = x
-        buildTree xs  = buildTree . map Reactions . chunk numActions $ xs
-    in  buildTree . map (NextState . decodeBcd) . chunk stateIdBcdLength
-
-
-encodeState :: PlayerState -> String
-encodeState PlayerState {..} = encodeBcd actionBcdLength playerAction
-    ++ encodeTransitions playerTransitions
-
-decodeState :: String -> PlayerState
-decodeState s = PlayerState { .. }  where
-    (action, transitions) = splitAt actionBcdLength s
-    playerAction          = decodeBcd action
-    playerTransitions     = decodeTransitions transitions
-
-
-encodeChromosome :: [PlayerState] -> String
-encodeChromosome = concatMap encodeState
-
-decodeChromosome :: String -> [PlayerState]
-decodeChromosome = map decodeState . chunk stateBcdLength
-
-
-randomAction :: Gen Action
-randomAction = choose (0, maxAction)
-
-randomStateID :: Gen StateID
-randomStateID = choose (0, maxState)
-
--- we need a number of recursive calls equal to the number of actions
--- i.e. number of branches = numActions
--- cons numActions recursive calls together
-randomStateTransitionTree :: Int -> Gen StateTransitionTree
-randomStateTransitionTree 0 =
-    Reactions <$> vectorOf numActions (fmap NextState randomStateID)
-randomStateTransitionTree depth =
-    let
-        actionBranches :: Int -> Gen [StateTransitionTree]
-        actionBranches 0 = pure []
-        actionBranches n = liftA2 (:)
-                                  (randomStateTransitionTree (depth - 1))
-                                  (actionBranches (n - 1))
-    in
-        Reactions <$> actionBranches numActions
-
--- depth = memory-1
-randomState :: Gen PlayerState
-randomState = do
-    playerAction      <- randomAction
-    playerTransitions <- randomStateTransitionTree (memory - 1)
-    pure PlayerState { .. }
-
-randomChromosome :: Gen [PlayerState]
-randomChromosome = vectorOf (maxState + 1) randomState
-
-
-newPlayers :: Int -> Gen [Agent [PlayerState]]
-newPlayers n =
-    newPopulation n encodeChromosome decodeChromosome randomChromosome
 
 
 findTransition :: StateTransitionTree -> [Action] -> StateID
@@ -140,7 +64,6 @@ findTransition (NextState stateID) _ = stateID
 findTransition (Reactions transitions) (lastMove : restMoves) =
     findTransition (transitions !! lastMove) restMoves
 
-nextState :: [PlayerState] -> PlayerState -> [Action] -> PlayerState
 -- reward matrix for Prisoner's Dilemma
 -- 0 = cooperate; 1 = defect
 dilemma :: [Int] -> [Int]
@@ -150,18 +73,107 @@ dilemma [0, 1] = [0, 5]
 dilemma [1, 1] = [1, 1]
 
 
+-- | returns the number of binary digits required to represent
+-- the largest value in [0..n-1] (which is n-1).
+-- assumes it is passed the number of values in [0..n-1] (namely, n)
+-- rather than the maximum value.
+-- >>> bcdLen 16
+-- 4
+bcdLen :: Int -> Int
+bcdLen = length . encodeBcd 0 . subtract 1
+
+
+encodeTransitions :: GamerParams -> StateTransitionTree -> String
+encodeTransitions GamerParams {..} (NextState i) =
+    encodeBcd (bcdLen gamerStates) i
+encodeTransitions params (Reactions ts) =
+    concatMap (encodeTransitions params) ts
+
+decodeTransitions :: GamerParams -> String -> StateTransitionTree
+decodeTransitions GamerParams {..} =
+    let buildTree xs = if length xs == gamerActions
+            then Reactions xs
+            else buildTree (map Reactions . chunk gamerActions $ xs)
+    in  buildTree . map (NextState . decodeBcd) . chunk (bcdLen gamerStates)
+
+encodeState :: GamerParams -> PlayerState -> String
+encodeState params@GamerParams {..} PlayerState {..} =
+    encodeBcd (bcdLen gamerActions) stateAction
+        ++ encodeTransitions params stateTransitions
+
+decodeState :: GamerParams -> String -> PlayerState
+decodeState params@GamerParams {..} s = PlayerState { .. }  where
+    (action, transitions) = splitAt (bcdLen gamerActions) s
+    stateAction           = decodeBcd action
+    stateTransitions      = decodeTransitions params transitions
+
+encodeChromosome :: GamerParams -> [PlayerState] -> String
+encodeChromosome params = concatMap (encodeState params)
+
+decodeChromosome :: GamerParams -> String -> [PlayerState]
+decodeChromosome params@GamerParams {..} = map (decodeState params)
+    . chunk stateBcdLen
+  where
+    stateBcdLen =
+        bcdLen gamerActions + bcdLen gamerStates * gamerActions ^ gamerMemory
+
+
+randomStateTransitionTree :: GamerParams -> Gen StateTransitionTree
+randomStateTransitionTree GamerParams {..} = f (gamerMemory - 1)
+  where
+    -- we need a number of recursive calls equal to the number of actions
+    -- i.e. number of branches = gamerActions
+    f depth = Reactions <$> vectorOf gamerActions xs
+      where
+        xs = if depth <= 0
+            then NextState <$> choose (0, gamerStates - 1)
+            else f (depth - 1)
+
+randomState :: GamerParams -> Gen PlayerState
+randomState params@GamerParams {..} = do
+    stateAction      <- choose (0, gamerActions - 1)
+    stateTransitions <- randomStateTransitionTree params
+    return PlayerState { .. }
+
+randomChromosome :: GamerParams -> Gen [PlayerState]
+randomChromosome params@GamerParams {..} =
+    vectorOf gamerStates (randomState params)
+
+newPlayers
+    :: GamerParams
+    -> Int -- ^ how many agents to generate
+    -> Gen [Agent [PlayerState]]
+newPlayers params n = newPopulation n
+                                    (encodeChromosome params)
+                                    (decodeChromosome params)
+                                    (randomChromosome params)
+
+
+nextState
+    :: [PlayerState] -- ^ the FSM player
+    -> PlayerState -- ^ the current state
+    -> [Int] -- ^ the opponent's previous actions
+    -> PlayerState
 nextState states PlayerState {..} opponentHistory =
-    states !! findTransition playerTransitions opponentHistory
+    states !! findTransition stateTransitions opponentHistory
 
-
-stepPlayer :: [PlayerState] -> [Action] -> State PlayerState Action
+-- | in the State monad, the state is the player's state
+-- and the value is the player's action
+stepPlayer
+    :: [PlayerState] -- ^ the FSM player
+    -> [Int] -- ^ the opponent's previous actions
+    -> State PlayerState Int
 stepPlayer chromosome opponentHistory = do
     oldState <- get
     let next = nextState chromosome oldState opponentHistory
     put next
-    return $ playerAction next
+    return $ stateAction next
 
-stepGame :: Game -> Int -> [[PlayerState]] -> State GameState [Int]
+stepGame
+    :: ([Int] -> [Int]) -- ^ the game being played
+    -> Int -- ^ number of rounds
+    -> [[PlayerState]] -- ^ list of FSM players
+    -> State GameState [Int]
 stepGame _ 0 _ = do
     GameState {..} <- get
     return gameScores
@@ -180,10 +192,14 @@ stepGame game n players = do
                   }
     stepGame game (n - 1) players
 
-playGame :: Game -> Int -> [[PlayerState]] -> [Int]
+playGame
+    :: ([Int] -> [Int]) -- ^ the game being played
+    -> Int -- ^ number of rounds
+    -> [[PlayerState]] -- ^ list of FSM players
+    -> [Int]
 playGame game n players =
     let gameStates    = map head players
-        actions       = map playerAction gameStates
+        actions       = map stateAction gameStates
         gameHistories = map (: []) actions
         gameScores    = game actions
     in  evalState (stepGame game (n - 1) players) GameState { .. }

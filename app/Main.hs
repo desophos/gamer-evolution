@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 module Main where
 
 import           Evolution
@@ -8,7 +9,12 @@ import           Util
 
 main :: IO ()
 main =
-    let players  = map agentChromosome <$> newPlayers 20
+    let params = GamerParams { .. }
+              where
+                gamerActions = 2
+                gamerStates  = 8
+                gamerMemory  = 1
+        players  = map agentChromosome <$> newPlayers params 20
         runMatch = playGame dilemma 3
         matches  = fmap matchups2 players
         results  = map runMatch <$> matches
