@@ -11,7 +11,6 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , quickCheckAll
                                                 , suchThat
                                                 )
-import           Test.QuickCheck.All            ( )
 import           Util                           ( chunk
                                                 , decodeBcd
                                                 , encodeBcd

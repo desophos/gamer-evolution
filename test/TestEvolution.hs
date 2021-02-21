@@ -18,7 +18,6 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , quickCheckAll
                                                 , suchThat
                                                 )
-import           Test.QuickCheck.All            ( )
 import           Util                           ( combineWith
                                                 , matchups2
                                                 , unique
