@@ -15,11 +15,11 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , NonNegative(getNonNegative)
                                                 , NonPositive(getNonPositive)
                                                 , Positive(getPositive)
+                                                , choose
                                                 , quickCheckAll
                                                 , suchThat
                                                 )
-import           Util                           ( combineWith
-                                                , matchups2
+import           Util                           ( matchups2
                                                 , unique
                                                 )
 
@@ -28,7 +28,7 @@ newtype ReproduceArgs a = ReproduceArgs (Double, [a] -> [Int], [Agent a]) derivi
 
 instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (ReproduceArgs a) where
     arbitrary = do
-        p      <- arbitrary `suchThat` combineWith (&&) [(>= 0), (<= 1)]
+        p      <- choose (0, 1)
         n      <- arbitrary `suchThat` (> 1)
         agents <- newPop n =<< arbitrary
         -- generate a fitness fn that strictly increases fitness
