@@ -1,7 +1,11 @@
 module Util where
 
 import           Data.Char                      ( digitToInt )
-import           Data.List                      ( nubBy )
+import           Data.List                      ( nubBy
+                                                , sort
+                                                )
+import qualified Data.Map                      as Map
+import qualified Data.Set                      as S
 import           GHC.List                       ( foldl1' )
 import           Numeric                        ( readInt )
 import           Text.Printf                    ( printf )
@@ -76,3 +80,22 @@ decodeBcd = fst . head . readInt 2 (`elem` ['0', '1']) digitToInt
 combineWith :: (b -> b -> b) -> [a -> b] -> a -> b
 combineWith _       [] _ = error "Util.combineWith requires a list of functions"
 combineWith combine fs x = foldl1' combine $ map ($ x) fs
+
+-- | a value x is grouped in the largest bin <= x
+-- | if a value is even lower than the first bin,
+-- it's grouped in the first bin anyway
+-- >>> sortBins [0,10..50] [0,3..59]
+-- fromList [(0,[0,3,6,9]),(10,[12,15,18]),(20,[21,24,27]),(30,[30,33,36,39]),(40,[42,45,48]),(50,[51,54,57])]
+sortBins
+    :: Ord a
+    => [a] -- ^ bins to group values into
+    -> [a] -- ^ values to group into bins
+    -> Map.Map a [a]
+sortBins bins = f $ Map.fromSet (const []) (S.fromList bins)
+  where
+    f acc []       = Map.map sort acc
+    f acc (x : xs) = f (Map.adjust (x :) (findBin x) acc) xs
+      where
+        findBin y = case takeWhile (y >=) bins of
+            [] -> head bins
+            ys -> last ys
