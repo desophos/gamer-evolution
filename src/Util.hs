@@ -7,10 +7,13 @@ import           Numeric                        ( readInt )
 import           Text.Printf                    ( printf )
 
 
--- merges consecutive equal elements
--- using f as the combining function
+-- | merges consecutive equal elements.
 -- recommended to sort first
-merge :: Eq a => (a -> a -> a) -> [a] -> [a]
+merge
+    :: Eq a
+    => (a -> a -> a) -- ^ combining function
+    -> [a] -- ^ list to merge
+    -> [a]
 merge f xs = mergeF xs []
   where
     mergeF []  acc = reverse acc
@@ -18,13 +21,16 @@ merge f xs = mergeF xs []
     mergeF (x : y : ys) acc =
         if x == y then mergeF ys (f x y : acc) else mergeF (y : ys) (x : acc)
 
--- continues merging until there's no more to merge
+-- | continues merging until there's no more to merge
 mergeAll :: Eq a => (a -> a -> a) -> [a] -> [a]
 mergeAll f xs = if merged == merge f merged then merged else mergeAll f merged
     where merged = merge f xs
 
--- splits xs into multiple `size`-length lists
-chunk :: Int -> [a] -> [[a]]
+-- | splits a list into multiple equal-length lists
+chunk
+    :: Int -- ^ the size of the resulting lists
+    -> [a] -- ^ the list to split
+    -> [[a]]
 chunk _ [] = []
 chunk size xs
     | size < 1
@@ -37,30 +43,33 @@ chunk size xs
     = y : chunk size ys
     where (y, ys) = splitAt size xs
 
--- True if xs contains no duplicates
+-- | True if the list contains no duplicates
 unique :: Eq a => [a] -> Bool
 unique []       = True
 unique [_     ] = True
 unique (x : xs) = x `notElem` xs && unique xs
 
--- True if its args share all elements in any order
+-- | True if the lists share all elements in any order
 sameMatch :: (Foldable t1, Foldable t2, Eq a) => t1 a -> t2 a -> Bool
 sameMatch xs ys = all (`elem` xs) ys && all (`elem` ys) xs
 
--- returns all pairings (combinations) in a list
+-- | returns all pairings (combinations) in a list
 matchups2 :: (Eq a) => [a] -> [[a]]
 matchups2 xs = nubBy sameMatch [ [x, y] | x <- xs, y <- xs, x /= y ]
 
--- given padding size and a decimal Int,
--- returns a padded string representation of the number in binary
-encodeBcd :: Int -> Int -> String
+-- >>> encodeBcd 4 7
+-- "0111"
+encodeBcd
+    :: Int -- ^ padding size
+    -> Int -- ^ decimal to encode
+    -> String -- ^ the decimal converted to binary and right-adjusted with zeroes
 encodeBcd = printf "%0*b"
 
--- given a string of binary digits, returns the number as a decimal Int
+-- | given a string of binary digits, returns the number as a decimal Int
 decodeBcd :: String -> Int
 decodeBcd = fst . head . readInt 2 (`elem` ['0', '1']) digitToInt
 
--- apply a list of functions to the same input
+-- | apply a list of functions to the same input
 -- and combine their outputs
 combineWith :: (b -> b -> b) -> [a -> b] -> a -> b
 combineWith _       [] _ = error "Util.combineWith requires a list of functions"
