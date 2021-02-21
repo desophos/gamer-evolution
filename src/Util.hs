@@ -34,14 +34,16 @@ chunk
 chunk _ [] = []
 chunk size xs
     | size < 1
-    = error "Util.chunk size must be >= 1"
+    = error $ "Util.chunk size must be >= 1" ++ errSuffix
     | size > length xs
-    = error "Util.chunk size must be <= list length"
+    = error $ "Util.chunk size must be <= list length" ++ errSuffix
     | length xs `rem` size /= 0
-    = error "Util.chunk size must divide list evenly"
+    = error $ "Util.chunk size must divide list evenly" ++ errSuffix
     | otherwise
     = y : chunk size ys
-    where (y, ys) = splitAt size xs
+  where
+    (y, ys)   = splitAt size xs
+    errSuffix = ". size = " ++ show size ++ "; length = " ++ show (length xs)
 
 -- | True if the list contains no duplicates
 unique :: Eq a => [a] -> Bool
