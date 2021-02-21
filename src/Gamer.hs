@@ -59,11 +59,6 @@ data GameState = GameState
     deriving (Eq, Show)
 
 
-findTransition :: StateTransitionTree -> [Action] -> StateID
-findTransition (NextState stateID) _ = stateID
-findTransition (Reactions transitions) (lastMove : restMoves) =
-    findTransition (transitions !! lastMove) restMoves
-
 -- reward matrix for Prisoner's Dilemma
 -- 0 = cooperate; 1 = defect
 dilemma :: [Int] -> [Int]
@@ -147,6 +142,21 @@ newPlayers params n = newPopulation n
                                     (encodeChromosome params)
                                     (decodeChromosome params)
                                     (randomChromosome params)
+
+
+-- | returns the index of the next state
+findTransition
+    :: StateTransitionTree -- ^ tree identifying potential states to transition to
+    -> [Int] -- ^ the opponent's previous actions
+    -> Int
+findTransition (NextState stateID) _ = stateID
+-- if memory is not full (fewer game rounds than memory)
+-- then default to leftmost branch (action 0)
+-- TODO: this isn't a great solution and may skew the algorithm
+findTransition (Reactions transitions) [] =
+    findTransition (head transitions) []
+findTransition (Reactions transitions) (lastMove : restMoves) =
+    findTransition (transitions !! lastMove) restMoves
 
 
 nextState
