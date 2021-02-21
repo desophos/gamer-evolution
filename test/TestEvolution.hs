@@ -33,6 +33,7 @@ instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Re
         agents <- newPop n =<< arbitrary
         -- generate a fitness fn that strictly increases fitness
         -- fitness starts at 0 so this also guarantees fitness will be > 0
+        -- necessary because fitnesses are passed as weights to `frequency`
         f      <- (arbitrary :: Gen (a -> Positive Int))
         return $ ReproduceArgs (p, map (getPositive . f), agents)
 
