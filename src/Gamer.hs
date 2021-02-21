@@ -3,6 +3,7 @@
 module Gamer
     ( newPlayers
     , playGame
+    , dilemma
     ) where
 
 import           Control.Applicative            ( Applicative(liftA2) )
@@ -140,6 +141,15 @@ findTransition (Reactions transitions) (lastMove : restMoves) =
     findTransition (transitions !! lastMove) restMoves
 
 nextState :: [PlayerState] -> PlayerState -> [Action] -> PlayerState
+-- reward matrix for Prisoner's Dilemma
+-- 0 = cooperate; 1 = defect
+dilemma :: [Int] -> [Int]
+dilemma [0, 0] = [3, 3]
+dilemma [1, 0] = [5, 0]
+dilemma [0, 1] = [0, 5]
+dilemma [1, 1] = [1, 1]
+
+
 nextState states PlayerState {..} opponentHistory =
     states !! findTransition playerTransitions opponentHistory
 
