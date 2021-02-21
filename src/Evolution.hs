@@ -23,7 +23,9 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , suchThat
                                                 , vectorOf
                                                 )
-import           Util                           ( mergeAll )
+import           Util                           ( combineWith
+                                                , mergeAll
+                                                )
 
 
 data Agent a = Agent
@@ -94,15 +96,15 @@ newPopulation n enc dec c = do
 -- given 2 parent Agents, returns a child Agent whose chromosome is
 -- produced via a simulation of genetic crossover
 crossover :: Agent a -> Agent a -> Gen (Agent a)
-crossover x y = newAgent encoder decoder <$> newC
-  where
-    encoder = agentEncoder x
-    decoder = agentDecoder x
-    c       = encoder . agentChromosome
-    n       = choose (1, length (c x) - 1)
-    part1   = flip take (c x) <$> n
-    part2   = flip drop (c y) <$> n
-    newC    = decoder <$> liftA2 (++) part1 part2
+crossover x y = do
+    let encoder = agentEncoder x
+        decoder = agentDecoder x
+        c       = encoder . agentChromosome
+        part1   = flip take (c x)
+        part2   = flip drop (c y)
+        newC    = decoder . combineWith (++) [part1, part2]
+    crosspoint <- choose (1, length (c x) - 1)
+    return $ newAgent encoder decoder (newC crosspoint)
 
 -- pSurvive: proportion of the population to survive to the next generation
 --           minimum 2 members
