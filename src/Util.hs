@@ -67,6 +67,9 @@ matchups2 :: (Ord a) => [a] -> [[a]]
 matchups2 xs = nubBy swappedPair [ [x, y] | x <- xs, y <- xs, x /= y ]
     where swappedPair xs [x,y] = xs == [y,x]
 
+(<<) :: Monad m => m a -> m b -> m a
+(<<) = flip (>>)
+
 -- | https://bor0.wordpress.com/2020/12/11/haskell-memoization-and-evaluation-model/
 memoize :: (Int -> a) -> (Int -> a)
 memoize f = (map f [0 ..] !!)
