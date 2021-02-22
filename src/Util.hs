@@ -67,13 +67,18 @@ matchups2 :: (Ord a) => [a] -> [[a]]
 matchups2 xs = nubBy swappedPair [ [x, y] | x <- xs, y <- xs, x /= y ]
     where swappedPair xs [x,y] = xs == [y,x]
 
+-- | https://bor0.wordpress.com/2020/12/11/haskell-memoization-and-evaluation-model/
+memoize :: (Int -> a) -> (Int -> a)
+memoize f = (map f [0 ..] !!)
+
+-- | Memoized over both parameters for better performance over many calls.
 -- >>> encodeBcd 4 7
 -- "0111"
 encodeBcd
     :: Int -- ^ padding size
     -> Int -- ^ decimal to encode
     -> String -- ^ the decimal converted to binary and right-adjusted with zeroes
-encodeBcd = printf "%0*b"
+encodeBcd = memoize . memoize $ printf "%0*b"
 
 -- | given a string of binary digits, returns the number as a decimal Int
 decodeBcd :: String -> Int
