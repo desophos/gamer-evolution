@@ -4,7 +4,7 @@ import           Data.Char                      ( digitToInt )
 import           Data.List                      ( nubBy
                                                 , sort
                                                 )
-import qualified Data.Map                      as Map
+import qualified Data.Map.Strict               as Map
 import qualified Data.Set                      as S
 import           GHC.List                       ( foldl1' )
 import           Numeric                        ( readInt )
