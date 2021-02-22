@@ -8,7 +8,6 @@ module Evolution
     , mergeAgents
     ) where
 
-import           Control.Applicative            ( Applicative(liftA2) )
 import           Data.List                      ( sort
                                                 , sortOn
                                                 )

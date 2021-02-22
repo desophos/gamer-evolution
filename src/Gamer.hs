@@ -7,7 +7,6 @@ module Gamer
     , dilemma
     ) where
 
-import           Control.Applicative            ( Applicative(liftA2) )
 import           Control.Monad.State            ( MonadState(get, put)
                                                 , State
                                                 , evalState
