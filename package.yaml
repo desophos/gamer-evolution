@@ -26,6 +26,9 @@ dependencies:
 - containers
 - generic-random
 - test-invariant
+- regex-tdfa
+- vector
+- statistics
 
 library:
   source-dirs: src

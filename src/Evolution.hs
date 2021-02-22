@@ -6,6 +6,7 @@ module Evolution
     , reproduce
     , evolve
     , mergeAgents
+    , getFitness
     ) where
 
 import           Data.List                      ( sort
