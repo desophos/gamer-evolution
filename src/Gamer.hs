@@ -43,21 +43,21 @@ instance Arbitrary GamerParams where
         return GamerParams { .. }
 
 data TransitionTree a = NextState a | Reactions [TransitionTree a]
-    deriving (Eq, Show)
+    deriving (Ord, Eq, Show)
 type StateTransitionTree = TransitionTree Int
 
 data PlayerState = PlayerState
     { stateAction      :: !Int
     , stateTransitions :: !StateTransitionTree
     }
-    deriving (Eq, Show)
+    deriving (Ord, Eq, Show)
 
 data GameState = GameState
     { gameStates    :: ![PlayerState]
     , gameHistories :: ![[Int]]
     , gameScores    :: ![Int]
     }
-    deriving (Eq, Show)
+    deriving (Ord, Eq, Show)
 
 
 -- reward matrix for Prisoner's Dilemma

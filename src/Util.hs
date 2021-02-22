@@ -55,13 +55,17 @@ unique []       = True
 unique [_     ] = True
 unique (x : xs) = x `notElem` xs && unique xs
 
--- | True if the lists share all elements in any order
-sameMatch :: (Foldable t1, Foldable t2, Eq a) => t1 a -> t2 a -> Bool
-sameMatch xs ys = all (`elem` xs) ys && all (`elem` ys) xs
+-- | True if the lists share all elements in any order.
+-- Duplicate elements are combined.
+sameMatch :: (Ord a) => [a] -> [a] -> Bool
+sameMatch xs ys = S.fromList xs == S.fromList ys
 
--- | returns all pairings (combinations) in a list
-matchups2 :: (Eq a) => [a] -> [[a]]
-matchups2 xs = nubBy sameMatch [ [x, y] | x <- xs, y <- xs, x /= y ]
+-- | Returns all unique pairs (length-2 combinations) in a list.
+-- >>> matchups2 "abcd"
+-- ["ab","ac","ad","bc","bd","cd"]
+matchups2 :: (Ord a) => [a] -> [[a]]
+matchups2 xs = nubBy swappedPair [ [x, y] | x <- xs, y <- xs, x /= y ]
+    where swappedPair xs [x,y] = xs == [y,x]
 
 -- >>> encodeBcd 4 7
 -- "0111"
