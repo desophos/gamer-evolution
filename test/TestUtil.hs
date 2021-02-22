@@ -50,13 +50,13 @@ prop_unique :: Ord a => [a] -> Bool
 prop_unique xs = (unique xs && setEq xs) || not (unique xs || setEq xs)
     where setEq ys = sort ys == (Set.toList . Set.fromList) ys
 
-prop_sameMatchFlip :: Eq a => [a] -> [a] -> Bool
+prop_sameMatchFlip :: Ord a => [a] -> [a] -> Bool
 prop_sameMatchFlip xs ys = sameMatch xs ys == sameMatch ys xs
 
-prop_matchups2UniquePairs :: Eq a => [a] -> Bool
+prop_matchups2UniquePairs :: Ord a => [a] -> Bool
 prop_matchups2UniquePairs = all unique . matchups2
 
-prop_matchups2Length :: Eq a => [a] -> Bool
+prop_matchups2Length :: Ord a => [a] -> Bool
 prop_matchups2Length = all ((== 2) . length) . matchups2
 
 prop_bcdRoundtrip :: Int -> Int -> Bool
