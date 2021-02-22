@@ -7,6 +7,7 @@ import           Test.Invariant                 ( inverts )
 import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , CoArbitrary
                                                 , Gen
+                                                , NonNegative(getNonNegative)
                                                 , listOf1
                                                 , quickCheckAll
                                                 , suchThat
@@ -59,8 +60,9 @@ prop_matchups2UniquePairs = all unique . matchups2
 prop_matchups2Length :: Ord a => [a] -> Bool
 prop_matchups2Length = all ((== 2) . length) . matchups2
 
-prop_bcdRoundtrip :: Int -> Int -> Bool
-prop_bcdRoundtrip n = decodeBcd `inverts` encodeBcd n
+prop_bcdRoundtrip :: NonNegative Int -> NonNegative Int -> Bool
+prop_bcdRoundtrip n =
+    (decodeBcd `inverts` encodeBcd (getNonNegative n)) . getNonNegative
 
 
 return []
