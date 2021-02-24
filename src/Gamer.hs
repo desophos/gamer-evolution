@@ -59,7 +59,7 @@ data GameState = GameState
     deriving (Ord, Eq, Show)
 
 
--- reward matrix for Prisoner's Dilemma
+-- | Reward matrix for the Prisoner's Dilemma.
 -- 0 = cooperate; 1 = defect
 dilemma :: [Int] -> [Int]
 dilemma [0, 0] = [3, 3]
@@ -68,9 +68,9 @@ dilemma [0, 1] = [0, 5]
 dilemma [1, 1] = [1, 1]
 
 
--- | returns the number of binary digits required to represent
+-- | Returns the number of binary digits required to represent
 -- the largest value in [0..n-1] (which is n-1).
--- assumes it is passed the number of values in [0..n-1] (namely, n)
+-- Assumes it is passed the number of values in [0..n-1] (namely, n)
 -- rather than the maximum value.
 -- >>> bcdLen 16
 -- 4
@@ -168,7 +168,7 @@ randomChromosome params@GamerParams {..} =
 
 newPlayers
     :: GamerParams
-    -> Int -- ^ how many agents to generate
+    -> Int -- ^ Number of agents to generate.
     -> Gen [Agent [PlayerState]]
 newPlayers params n = newPopulation n
                                     (encodeChromosome params)
@@ -176,10 +176,10 @@ newPlayers params n = newPopulation n
                                     (randomChromosome params)
 
 
--- | returns the index of the next state
+-- | Returns the index of the next PlayerState.
 findTransition
-    :: StateTransitionTree -- ^ tree identifying potential states to transition to
-    -> [Int] -- ^ the opponent's previous actions
+    :: StateTransitionTree -- ^ Tree identifying potential states to transition to.
+    -> [Int] -- ^ The opponent's previous actions (sorted from most to least recent).
     -> Int
 findTransition (NextState stateID) _ = stateID
 -- if memory is not full (fewer game rounds than memory)
@@ -192,18 +192,18 @@ findTransition (Reactions transitions) (lastMove : restMoves) =
 
 
 nextState
-    :: [PlayerState] -- ^ the FSM player
-    -> PlayerState -- ^ the current state
-    -> [Int] -- ^ the opponent's previous actions
+    :: [PlayerState] -- ^ The FSM player.
+    -> PlayerState -- ^ The current state.
+    -> [Int] -- ^ The opponent's previous actions.
     -> PlayerState
 nextState states PlayerState {..} opponentHistory =
     states !! findTransition stateTransitions opponentHistory
 
--- | in the State monad, the state is the player's state
--- and the value is the player's action
+-- | In the State monad, the state is the player's state
+-- and the value is the player's action.
 stepPlayer
-    :: [PlayerState] -- ^ the FSM player
-    -> [Int] -- ^ the opponent's previous actions
+    :: [PlayerState] -- ^ The FSM player.
+    -> [Int] -- ^ The opponent's previous actions.
     -> State PlayerState Int
 stepPlayer chromosome opponentHistory = do
     oldState <- get
@@ -212,9 +212,9 @@ stepPlayer chromosome opponentHistory = do
     return $ stateAction next
 
 stepGame
-    :: ([Int] -> [Int]) -- ^ the game being played
-    -> Int -- ^ number of rounds
-    -> [[PlayerState]] -- ^ list of FSM players
+    :: ([Int] -> [Int]) -- ^ The game being played.
+    -> Int -- ^ Number of rounds to play.
+    -> [[PlayerState]] -- ^ List of FSM players.
     -> State GameState [Int]
 stepGame _ 0 _ = do
     GameState {..} <- get
@@ -235,9 +235,9 @@ stepGame game n players = do
     stepGame game (n - 1) players
 
 playGame
-    :: ([Int] -> [Int]) -- ^ the game being played
-    -> Int -- ^ number of rounds
-    -> [[PlayerState]] -- ^ list of FSM players
+    :: ([Int] -> [Int]) -- ^ The game being played. Must preserve list length.
+    -> Int -- ^ Number of rounds to play.
+    -> [[PlayerState]] -- ^ List of FSM players.
     -> [Int]
 playGame game n players =
     let gameStates    = map head players

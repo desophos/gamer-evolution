@@ -11,12 +11,12 @@ import           Numeric                        ( readInt )
 import           Text.Printf                    ( printf )
 
 
--- | merges consecutive equal elements.
--- recommended to sort first
+-- | Merges consecutive equal elements.
+-- Recommended to sort first.
 merge
     :: Eq a
-    => (a -> a -> a) -- ^ combining function
-    -> [a] -- ^ list to merge
+    => (a -> a -> a) -- ^ Combining function.
+    -> [a] -- ^ List to merge.
     -> [a]
 merge f xs = mergeF xs []
   where
@@ -25,15 +25,15 @@ merge f xs = mergeF xs []
     mergeF (x : y : ys) acc =
         if x == y then mergeF ys (f x y : acc) else mergeF (y : ys) (x : acc)
 
--- | continues merging until there's no more to merge
+-- | Continues merging until there's no more to merge.
 mergeAll :: Eq a => (a -> a -> a) -> [a] -> [a]
 mergeAll f xs = if merged == merge f merged then merged else mergeAll f merged
     where merged = merge f xs
 
--- | splits a list into multiple equal-length lists
+-- | Splits a list into multiple equal-length lists.
 chunk
-    :: Int -- ^ the size of the resulting lists
-    -> [a] -- ^ the list to split
+    :: Int -- ^ The size of the resulting lists.
+    -> [a] -- ^ The list to split.
     -> [[a]]
 chunk _ [] = []
 chunk size xs
@@ -49,7 +49,7 @@ chunk size xs
     (y, ys)   = splitAt size xs
     errSuffix = ". size = " ++ show size ++ "; length = " ++ show (length xs)
 
--- | True if the list contains no duplicates
+-- | True if the list contains no duplicates.
 unique :: Eq a => [a] -> Bool
 unique []       = True
 unique [_     ] = True
@@ -65,7 +65,7 @@ sameMatch xs ys = S.fromList xs == S.fromList ys
 -- ["ab","ac","ad","bc","bd","cd"]
 matchups2 :: (Ord a) => [a] -> [[a]]
 matchups2 xs = nubBy swappedPair [ [x, y] | x <- xs, y <- xs, x /= y ]
-    where swappedPair xs [x,y] = xs == [y,x]
+    where swappedPair xs [x, y] = xs == [y, x]
 
 (<<) :: Monad m => m a -> m b -> m a
 (<<) = flip (>>)
@@ -83,25 +83,25 @@ encodeBcd
     -> String -- ^ the decimal converted to binary and right-adjusted with zeroes
 encodeBcd = memoize . memoize $ printf "%0*b"
 
--- | given a string of binary digits, returns the number as a decimal Int
+-- | Given a string of binary digits, returns the number as a decimal Int.
 decodeBcd :: String -> Int
 decodeBcd = fst . head . readInt 2 (`elem` ['0', '1']) digitToInt
 
--- | apply a list of functions to the same input
--- and combine their outputs
+-- | Apply a list of functions to the same input
+-- and combine their outputs.
 combineWith :: (b -> b -> b) -> [a -> b] -> a -> b
 combineWith _       [] _ = error "Util.combineWith requires a list of functions"
 combineWith combine fs x = foldl1' combine $ map ($ x) fs
 
--- | a value x is grouped in the largest bin <= x
--- | if a value is even lower than the first bin,
--- it's grouped in the first bin anyway
+-- | A value x is grouped in the largest bin <= x.
+-- | If a value is even lower than the first bin,
+-- it's grouped in the first bin anyway.
 -- >>> sortBins [0,10..50] [0,3..59]
 -- fromList [(0,[0,3,6,9]),(10,[12,15,18]),(20,[21,24,27]),(30,[30,33,36,39]),(40,[42,45,48]),(50,[51,54,57])]
 sortBins
     :: Ord a
-    => [a] -- ^ bins to group values into
-    -> [a] -- ^ values to group into bins
+    => [a] -- ^ Bins to group values into.
+    -> [a] -- ^ Values to group into bins.
     -> Map.Map a [a]
 sortBins bins = f $ Map.fromSet (const []) (S.fromList bins)
   where
