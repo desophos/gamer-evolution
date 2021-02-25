@@ -2,6 +2,7 @@
 
 module Evolution
     ( Agent(..)
+    , EvolutionParams(..)
     , newPopulation
     , reproduce
     , evolve
@@ -12,13 +13,18 @@ module Evolution
 import           Data.List                      ( sort
                                                 , sortOn
                                                 )
-import           GHC.Float.RealFracMethods      ( floorDoubleInt )
+import           GHC.Float.RealFracMethods      ( floorDoubleInt
+                                                , roundDoubleInt
+                                                )
 import           GHC.Generics                   ( Generic )
 import           Test.Invariant                 ( inverts )
 import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , CoArbitrary
                                                 , Gen
+                                                , Positive
                                                 , choose
+                                                , chooseInt
+                                                , elements
                                                 , frequency
                                                 , suchThat
                                                 , vectorOf
@@ -28,6 +34,31 @@ import           Util                           ( combineWith
                                                 , omit
                                                 )
 
+
+data EvolutionParams = EvolutionParams
+    { evolveGenerations :: !Int -- ^ Number of generations to evolve the population for.
+    , evolvePopSize     :: !Int -- ^ Number of Agents in the population.
+    , evolveSurvivors   :: !Int -- ^ Number of Agents that survive each generation (>= 2).
+    , evolveMutateP     :: !Double -- ^ Probability of mutation per gene (0 <= p <= 1).
+    }
+    deriving (Eq, Show)
+
+instance Arbitrary EvolutionParams where
+    arbitrary = do
+        evolveGenerations <- chooseInt (5, 10)
+        evolvePopSize     <- chooseInt (20, 60) `suchThat` even
+        let both f (x, y) = (f x, f y)
+            scalePopSize = roundDoubleInt . (* fromIntegral evolvePopSize)
+            surviveRange = both scalePopSize (0.3, 0.8)
+        evolveSurvivors <- arbitrary `suchThat` combineWith
+            (&&)
+            [ (> 1)
+            , (< evolvePopSize)
+            , (> fst surviveRange)
+            , (< snd surviveRange)
+            ]
+        evolveMutateP <- choose (0, 0.1) `suchThat` (> 0) -- avoid division by zero in analysis
+        return EvolutionParams { .. }
 
 data Agent a = Agent
     { agentId      :: !Int
@@ -116,54 +147,55 @@ mutate pMutate opts = f
         return (x' : xs')
 
 -- | Given 2 parent Agents, returns a child Agent whose chromosome is
--- produced via a simulation of genetic crossover.
-crossover :: Agent a -> Agent a -> Gen (Agent a)
-crossover x y = do
-    let encoder = agentEncoder x
-        decoder = agentDecoder x
-        c       = encoder . agentGenome
-        part1   = flip take (c x)
-        part2   = flip drop (c y)
-        newC    = decoder . combineWith (++) [part1, part2]
-    crosspoint <- choose (1, length (c x) - 1)
-    return $ newAgent encoder decoder (newC crosspoint)
+-- produced via a simulation of genetic crossover and mutation.
+crossover :: EvolutionParams -> Agent a -> Agent a -> Gen (Agent a)
+crossover EvolutionParams {..} x y = do
+    let encoder   = agentEncoder x
+        decoder   = agentDecoder x
+        genes     = agentGenes x
+        encoded   = encoder . agentGenome
+        part1     = flip take (encoded x)
+        part2     = flip drop (encoded y)
+        combineAt = combineWith (++) [part1, part2]
+    crosspoint <- chooseInt (1, length (encoded x) - 1)
+    mutated    <- mutate evolveMutateP genes (combineAt crosspoint)
+    return $ newAgent encoder decoder genes (decoder mutated)
 
 reproduce
-    :: Double -- ^ Proportion (0 < p < 1) of the population to survive to the next generation (minimum 2 members).
+    :: EvolutionParams
     -> ([a] -> [Int]) -- ^ Fitness function to determine Agents' likelihood to reproduce. Must preserve list length.
     -> ([Agent a] -> [[Agent a]]) -- ^ Given the population, produces the list of groups passed to the fitness fn.
     -> [Agent a] -- ^ The population of Agents to reproduce.
     -> Gen [Agent a] -- ^ The population with non-surviving Agents replaced by children produced by genetic crossover.
-reproduce pSurvive f matchup pop = (survived ++) <$> births
+reproduce params@EvolutionParams {..} f matchup pop = (survived ++) <$> births
   where
-    nSurvive =
-        max 2 . floorDoubleInt . (*) pSurvive . fromIntegral . length $ pop
     survived =
         sortOn agentId
-            . take nSurvive
+            . take evolveSurvivors
             . sortOn agentFitness
             . getFitness f
             . matchup
             $ pop
     fitPairs xs = zip (map agentFitness xs) (map pure xs)
     pickFit = frequency . fitPairs
-    mate = do
+    mate    = do
         x <- pickFit survived
         y <- pickFit $ survived `omit` x
-        crossover x y
-    nBirth  = length pop - nSurvive
+        crossover params x y
+    nBirth  = length pop - evolveSurvivors
     nextIds = iterate (+ 1) . (+ 1) . agentId . last $ survived
     births  = flip (zipWith withId) nextIds . replicate nBirth <$> mate
 
 -- | Evolves a population over a number of generations. See `reproduce`.
 evolve
-    :: Double
+    :: EvolutionParams
     -> ([a] -> [Int])
     -> ([Agent a] -> [[Agent a]])
     -> [Agent a]
-    -> Int -- ^ The number of generations.
     -> Gen [Agent a]
-evolve pSurvive f matchup pop = evolve' (pure pop)
+evolve params@EvolutionParams {..} f matchup pop = evolve'
+    (pure pop)
+    evolveGenerations
   where
-    reproduce' = reproduce pSurvive f matchup
+    reproduce' = reproduce params f matchup
     evolve' xs n = if n <= 0 then xs else evolve' (reproduce' =<< xs) (n - 1)

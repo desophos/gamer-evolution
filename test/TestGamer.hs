@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, RecordWildCards #-}
 module TestGamer where
 
 import           Data.List                      ( stripPrefix )
@@ -6,6 +6,7 @@ import qualified Data.Map.Strict               as Map
 import           Data.Maybe                     ( fromMaybe )
 import qualified Data.Vector                   as V
 import           Evolution                      ( Agent(..)
+                                                , EvolutionParams(..)
                                                 , evolve
                                                 , getFitness
                                                 )
@@ -24,15 +25,13 @@ import           System.IO                      ( IOMode(WriteMode)
                                                 , openFile
                                                 , stdout
                                                 )
-import           Test.QuickCheck                ( Arbitrary(arbitrary)
-                                                , Gen
+import           Test.QuickCheck                ( Gen
                                                 , Property
-                                                , choose
                                                 , counterexample
                                                 , cover
                                                 , quickCheckAll
-                                                , suchThat
                                                 , verboseCheck
+                                                , withMaxSuccess
                                                 )
 import           Text.Regex.TDFA                ( (=~) )
 import           Util                           ( (<<)
@@ -41,40 +40,20 @@ import           Util                           ( (<<)
                                                 )
 
 
-newtype PSurvive = PSurvive {getPSurvive :: Double} deriving (Show, Eq)
-
-instance Arbitrary PSurvive where
-    arbitrary = PSurvive <$> choose (0.3, 0.7 :: Double)
-
-newtype Generations = Generations {getGenerations :: Int} deriving (Show, Eq)
-
-instance Arbitrary Generations where
-    arbitrary = Generations <$> choose (10, 30 :: Int)
-
-newtype PopSize = PopSize {getPopSize :: Int} deriving (Show, Eq)
-
-instance Arbitrary PopSize where
-    arbitrary = PopSize <$> choose (10, 30 :: Int) `suchThat` even
-
-
-prop_evolveFitness
-    :: GamerParams -> PopSize -> PSurvive -> Generations -> Gen Property
-prop_evolveFitness params (PopSize size) (PSurvive pSurvive) (Generations gens)
-    = do
-        let game = playGame dilemma 2
-            avgFit =
-                combineWith (/)
-                    . map (realToFrac .)
-                    $ [ sum . map agentFitness . getFitness game . matchups2
-                      , length
-                      ]
-        pop  <- newPlayers params { gamerActions = 2 } size
-        pop' <- evolve pSurvive game matchups2 pop gens
-        let dFit = avgFit pop' - avgFit pop
-        return
-            . counterexample ("dFit = " ++ show dFit)
-            . cover 90 (dFit > 0) "increased fitness"
-            $ True -- we only care about the statistics
+prop_evolveFitness :: GamerParams -> EvolutionParams -> Gen Property
+prop_evolveFitness gParams eParams@EvolutionParams {..} = do
+    let game = playGame dilemma 2
+        avgFit =
+            combineWith (/)
+                . map (realToFrac .)
+                $ [sum . map agentFitness . getFitness game . matchups2, length]
+    pop  <- newPlayers gParams { gamerActions = 2 } evolvePopSize
+    pop' <- evolve eParams game matchups2 pop
+    let dFit = avgFit pop' - avgFit pop
+    return
+        . counterexample ("dFit = " ++ show dFit)
+        . cover 90 (dFit > 0) "increased fitness"
+        $ True -- we only care about the statistics
 
 
 analyzeEvolveFitness :: IO Bool

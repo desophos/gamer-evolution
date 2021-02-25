@@ -3,6 +3,7 @@ module TestEvolution where
 
 import           Data.Typeable                  ( Typeable )
 import           Evolution                      ( Agent(..)
+                                                , EvolutionParams(..)
                                                 , evolve
                                                 , mergeAgents
                                                 , newPopulation
@@ -15,27 +16,24 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , NonNegative(getNonNegative)
                                                 , NonPositive(getNonPositive)
                                                 , Positive(getPositive)
-                                                , choose
                                                 , quickCheckAll
-                                                , suchThat
                                                 )
 import           Util                           ( matchups2
                                                 , unique
                                                 )
 
 
-newtype ReproduceArgs a = ReproduceArgs (Double, [a] -> [Int], [Agent a]) deriving (Show)
+newtype ReproduceArgs a = ReproduceArgs (EvolutionParams, [a] -> [Int], [Agent a]) deriving (Show)
 
 instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (ReproduceArgs a) where
     arbitrary = do
-        p      <- choose (0, 1)
-        n      <- arbitrary `suchThat` (> 1)
-        agents <- newPop n =<< arbitrary
+        params@EvolutionParams {..} <- arbitrary
+        agents                      <- newPop evolvePopSize =<< arbitrary
         -- generate a fitness fn that strictly increases fitness
         -- fitness starts at 0 so this also guarantees fitness will be > 0
         -- necessary because fitnesses are passed as weights to `frequency`
-        f      <- (arbitrary :: Gen (a -> Positive Int))
-        return $ ReproduceArgs (p, map (getPositive . f), agents)
+        f                           <- (arbitrary :: Gen (a -> Positive Int))
+        return $ ReproduceArgs (params, map (getPositive . f), agents)
 
 
 newPop :: (Arbitrary a) => Int -> Agent a -> Gen [Agent a]
@@ -77,26 +75,30 @@ prop_newPopulationUniform n agent c = do
         dec z = agentDecoder z $ enc z
 
 prop_reproduceLength :: ReproduceArgs a -> Gen Bool
-prop_reproduceLength (ReproduceArgs (p, f, pop)) = do
-    pop' <- reproduce p f matchups2 pop
+prop_reproduceLength (ReproduceArgs (params, f, pop)) = do
+    pop' <- reproduce params f matchups2 pop
     return $ length pop == length pop'
 
 prop_reproduceIds :: ReproduceArgs a -> Gen Bool
-prop_reproduceIds (ReproduceArgs (p, f, pop)) =
-    fIncreasing True agentId <$> reproduce p f matchups2 pop
+prop_reproduceIds (ReproduceArgs (params, f, pop)) =
+    fIncreasing True agentId <$> reproduce params f matchups2 pop
   where
     fIncreasing acc _ []           = acc
     fIncreasing acc _ [_         ] = acc
     fIncreasing acc g (x : y : xs) = fIncreasing (acc && g x < g y) g (y : xs)
 
 prop_evolveId :: ReproduceArgs a -> NonPositive Int -> Gen Bool
-prop_evolveId (ReproduceArgs (p, f, pop)) n =
-    (pop ==) <$> evolve p f matchups2 pop (getNonPositive n)
+prop_evolveId (ReproduceArgs (params, f, pop)) n =
+    (pop ==)
+        <$> evolve params { evolveGenerations = getNonPositive n }
+                   f
+                   matchups2
+                   pop
 
-prop_evolvePreserve :: ReproduceArgs a -> Positive Int -> Gen Bool
-prop_evolvePreserve (ReproduceArgs (p, f, pop)) n = do
-    pop' <- evolve p f matchups2 pop (getPositive n)
-    let args' = ReproduceArgs (p, f, pop')
+prop_evolvePreserve :: ReproduceArgs a -> Gen Bool
+prop_evolvePreserve (ReproduceArgs (params, f, pop)) = do
+    pop' <- evolve params f matchups2 pop
+    let args' = ReproduceArgs (params, f, pop')
     len <- prop_reproduceLength args'
     ids <- prop_reproduceIds args'
     return $ len && ids
