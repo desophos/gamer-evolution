@@ -87,7 +87,11 @@ newAgent enc dec c = Agent { agentId      = 0
 
 -- | Returns a population of agents with incremental IDs.
 newPopulation
-    :: Int -> (a -> String) -> (String -> a) -> Gen a -> Gen [Agent a]
+    :: Int -- ^ Number of agents to generate.
+    -> (a -> String) -- ^ Encodes an agent's genome.
+    -> (String -> a) -- ^ Decodes an agent's genome. Should invert the encoder.
+    -> Gen a -- ^ Genome generator.
+    -> Gen [Agent a]
 newPopulation n enc dec c = do
     let agent = newAgent enc dec <$> c
     agents <- vectorOf n agent
