@@ -29,7 +29,7 @@ import           Util                           ( chunk
 
 data GamerParams = GamerParams
     { gamerActions :: !Int -- ^ number of possible actions a player can take
-    , gamerStates  :: !Int -- ^ number of states in a player's chromosome
+    , gamerStates  :: !Int -- ^ number of states in a player's genome
     , gamerMemory  :: !Int -- ^ how many rounds back a player will remember its opponent's actions
     }
     deriving (Eq, Show)
@@ -116,20 +116,19 @@ decodeState params@GamerParams {..} s = PlayerState { .. }  where
 
 prop_encodeUniformLen :: GamerParams -> Gen Bool
 prop_encodeUniformLen params = do
-    let encodedLen =
-            length . encodeChromosome params <$> randomChromosome params
+    let encodedLen = length . encodeGenome params <$> randomGenome params
     cs <- vectorOf 20 encodedLen
     return $ all (head cs ==) cs
 
 -- prop> \(params :: GamerParams) -> prop_encodeUniformLen params
 -- +++ OK, passed 100 tests.
-encodeChromosome :: GamerParams -> [PlayerState] -> String
-encodeChromosome params = concatMap (encodeState params)
+encodeGenome :: GamerParams -> [PlayerState] -> String
+encodeGenome params = concatMap (encodeState params)
 
--- prop> \(params :: GamerParams) -> (decodeChromosome params) `inverts` (encodeChromosome params) <$> randomChromosome params
+-- prop> \(params :: GamerParams) -> (decodeGenome params) `inverts` (encodeGenome params) <$> randomGenome params
 -- +++ OK, passed 100 tests.
-decodeChromosome :: GamerParams -> String -> [PlayerState]
-decodeChromosome params@GamerParams {..} = map (decodeState params)
+decodeGenome :: GamerParams -> String -> [PlayerState]
+decodeGenome params@GamerParams {..} = map (decodeState params)
     . chunk stateBcdLen
   where
     stateBcdLen =
@@ -162,8 +161,8 @@ randomState params@GamerParams {..} = do
     stateTransitions <- randomStateTransitionTree params
     return PlayerState { .. }
 
-randomChromosome :: GamerParams -> Gen [PlayerState]
-randomChromosome params@GamerParams {..} =
+randomGenome :: GamerParams -> Gen [PlayerState]
+randomGenome params@GamerParams {..} =
     vectorOf gamerStates (randomState params)
 
 newPlayers
@@ -171,9 +170,9 @@ newPlayers
     -> Int -- ^ Number of agents to generate.
     -> Gen [Agent [PlayerState]]
 newPlayers params n = newPopulation n
-                                    (encodeChromosome params)
-                                    (decodeChromosome params)
-                                    (randomChromosome params)
+                                    (encodeGenome params)
+                                    (decodeGenome params)
+                                    (randomGenome params)
 
 
 -- | Returns the index of the next PlayerState.
@@ -205,9 +204,9 @@ stepPlayer
     :: [PlayerState] -- ^ The FSM player.
     -> [Int] -- ^ The opponent's previous actions.
     -> State PlayerState Int
-stepPlayer chromosome opponentHistory = do
+stepPlayer genome opponentHistory = do
     oldState <- get
-    let next = nextState chromosome oldState opponentHistory
+    let next = nextState genome oldState opponentHistory
     put next
     return $ stateAction next
 

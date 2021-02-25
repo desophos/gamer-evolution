@@ -29,11 +29,11 @@ import           Util                           ( combineWith
 
 
 data Agent a = Agent
-    { agentId         :: !Int
-    , agentFitness    :: !Int
-    , agentChromosome :: !a
-    , agentEncoder    :: !(a -> String)
-    , agentDecoder    :: !(String -> a)
+    { agentId      :: !Int
+    , agentFitness :: !Int
+    , agentGenome  :: !a
+    , agentEncoder :: !(a -> String)
+    , agentDecoder :: !(String -> a)
     }
     deriving Generic
 
@@ -46,10 +46,10 @@ instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
         let flip3 f x y z = f z y x
             agentId      = 0
             agentFitness = 0
-        agentChromosome <- arbitrary
-        agentEncoder    <- arbitrary
-        agentDecoder    <-
-            arbitrary `suchThat` flip3 inverts agentChromosome agentEncoder
+        agentGenome  <- arbitrary
+        agentEncoder <- arbitrary
+        agentDecoder <-
+            arbitrary `suchThat` flip3 inverts agentGenome agentEncoder
         return Agent { .. }
 
 
@@ -73,16 +73,16 @@ getFitness
     -> [Agent a] -- ^ The population with updated agentFitness.
 getFitness f = mergeAgents . concatMap applyScores
   where
-    getScores = f . map agentChromosome
+    getScores = f . map agentGenome
     applyScores xs = zipWith withFitness xs (getScores xs)
 
 
 newAgent :: (a -> String) -> (String -> a) -> a -> Agent a
-newAgent enc dec c = Agent { agentId         = 0
-                           , agentFitness    = 0
-                           , agentChromosome = c
-                           , agentEncoder    = enc
-                           , agentDecoder    = dec
+newAgent enc dec c = Agent { agentId      = 0
+                           , agentFitness = 0
+                           , agentGenome  = c
+                           , agentEncoder = enc
+                           , agentDecoder = dec
                            }
 
 -- | Returns a population of agents with incremental IDs.
@@ -100,7 +100,7 @@ crossover :: Agent a -> Agent a -> Gen (Agent a)
 crossover x y = do
     let encoder = agentEncoder x
         decoder = agentDecoder x
-        c       = encoder . agentChromosome
+        c       = encoder . agentGenome
         part1   = flip take (c x)
         part2   = flip drop (c y)
         newC    = decoder . combineWith (++) [part1, part2]
