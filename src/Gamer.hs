@@ -170,6 +170,7 @@ newPlayers
     -> Int -- ^ Number of agents to generate.
     -> Gen [Agent [PlayerState]]
 newPlayers params n = newPopulation n
+                                    "01"
                                     (encodeGenome params)
                                     (decodeGenome params)
                                     (randomGenome params)

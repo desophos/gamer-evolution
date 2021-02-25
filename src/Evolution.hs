@@ -33,6 +33,7 @@ data Agent a = Agent
     { agentId      :: !Int
     , agentFitness :: !Int
     , agentGenome  :: !a
+    , agentGenes   :: ![Char] -- ^ The possible characters that make up the encoded genome. Length should be >= 2.
     , agentEncoder :: !(a -> String)
     , agentDecoder :: !(String -> a)
     }
@@ -48,7 +49,9 @@ instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
             agentId      = 0
             agentFitness = 0
         agentGenome  <- arbitrary
-        agentEncoder <- arbitrary
+        agentGenes   <- arbitrary `suchThat` ((> 1) . length)
+        agentEncoder <-
+            arbitrary `suchThat` (\f -> all (`elem` agentGenes) (f agentGenome))
         agentDecoder <-
             arbitrary `suchThat` flip3 inverts agentGenome agentEncoder
         return Agent { .. }
@@ -78,26 +81,39 @@ getFitness f = mergeAgents . concatMap applyScores
     applyScores xs = zipWith withFitness xs (getScores xs)
 
 
-newAgent :: (a -> String) -> (String -> a) -> a -> Agent a
-newAgent enc dec c = Agent { agentId      = 0
-                           , agentFitness = 0
-                           , agentGenome  = c
-                           , agentEncoder = enc
-                           , agentDecoder = dec
-                           }
+newAgent :: (a -> String) -> (String -> a) -> [Char] -> a -> Agent a
+newAgent agentEncoder agentDecoder agentGenes agentGenome = Agent { .. }
+  where
+    agentId      = 0
+    agentFitness = 0
 
 -- | Returns a population of agents with incremental IDs.
 newPopulation
     :: Int -- ^ Number of agents to generate.
+    -> [Char] -- ^ Possible genes that make up the encoded genome.
     -> (a -> String) -- ^ Encodes an agent's genome.
     -> (String -> a) -- ^ Decodes an agent's genome. Should invert the encoder.
     -> Gen a -- ^ Genome generator.
     -> Gen [Agent a]
-newPopulation n enc dec c = do
-    let agent = newAgent enc dec <$> c
+newPopulation n genes enc dec genome = do
+    let agent = newAgent enc dec genes <$> genome
     agents <- vectorOf n agent
     return $ zipWith withId agents (iterate (+ 1) 0)
 
+
+mutate
+    :: Double -- ^ Probability per gene of mutation.
+    -> [Char] -- ^ Possible genes to mutate into.
+    -> String -- ^ The genome to mutate.
+    -> Gen String
+mutate pMutate opts = f
+  where
+    f []       = pure []
+    f (x : xs) = do
+        p   <- choose (0, 1)
+        x'  <- if p <= pMutate then elements (opts `omit` x) else pure x
+        xs' <- f xs
+        return (x' : xs')
 
 -- | Given 2 parent Agents, returns a child Agent whose chromosome is
 -- produced via a simulation of genetic crossover.

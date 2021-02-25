@@ -39,7 +39,8 @@ instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Re
 
 
 newPop :: (Arbitrary a) => Int -> Agent a -> Gen [Agent a]
-newPop n Agent {..} = newPopulation n agentEncoder agentDecoder arbitrary
+newPop n Agent {..} =
+    newPopulation n agentGenes agentEncoder agentDecoder arbitrary
 
 prop_mergeAgentsUnique :: [Agent a] -> Bool
 prop_mergeAgentsUnique = unique . mergeAgents
