@@ -25,6 +25,7 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 )
 import           Util                           ( combineWith
                                                 , mergeAll
+                                                , omit
                                                 )
 
 
@@ -130,7 +131,6 @@ reproduce pSurvive f matchup pop = (survived ++) <$> births
             $ pop
     fitPairs xs = zip (map agentFitness xs) (map pure xs)
     pickFit = frequency . fitPairs
-    omit xs x = filter (\y -> agentId y /= agentId x) xs
     mate = do
         x <- pickFit survived
         y <- pickFit $ survived `omit` x

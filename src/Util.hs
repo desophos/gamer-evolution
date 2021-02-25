@@ -11,6 +11,13 @@ import           Numeric                        ( readInt )
 import           Text.Printf                    ( printf )
 
 
+omit
+    :: Eq a
+    => [a] -- ^ List to omit from.
+    -> a -- ^ Element to omit.
+    -> [a] -- ^ List without the omitted element.
+omit xs x = filter (/= x) xs
+
 -- | Merges consecutive equal elements.
 -- Recommended to sort first.
 merge
