@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, RecordWildCards, ScopedTypeVariables #-}
 module TestEvolution where
 
+import qualified Data.Set                      as S
 import           Data.Typeable                  ( Typeable )
 import           Evolution                      ( Agent(..)
                                                 , EvolutionParams(..)
@@ -18,7 +19,7 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , Positive(getPositive)
                                                 , quickCheckAll
                                                 )
-import           Util                           ( matchups2
+import           Util                           ( matchups
                                                 , unique
                                                 )
 
@@ -76,12 +77,13 @@ prop_newPopulationUniform n agent c = do
 
 prop_reproduceLength :: ReproduceArgs a -> Gen Bool
 prop_reproduceLength (ReproduceArgs (params, f, pop)) = do
-    pop' <- reproduce params f matchups2 pop
+    pop' <- reproduce params f (matchups 2 . S.fromDistinctAscList) pop
     return $ length pop == length pop'
 
 prop_reproduceIds :: ReproduceArgs a -> Gen Bool
 prop_reproduceIds (ReproduceArgs (params, f, pop)) =
-    fIncreasing True agentId <$> reproduce params f matchups2 pop
+    fIncreasing True agentId
+        <$> reproduce params f (matchups 2 . S.fromDistinctAscList) pop
   where
     fIncreasing acc _ []           = acc
     fIncreasing acc _ [_         ] = acc
@@ -92,12 +94,12 @@ prop_evolveId (ReproduceArgs (params, f, pop)) n =
     (pop ==)
         <$> evolve params { evolveGenerations = getNonPositive n }
                    f
-                   matchups2
+                   (matchups 2 . S.fromDistinctAscList)
                    pop
 
 prop_evolvePreserve :: ReproduceArgs a -> Gen Bool
 prop_evolvePreserve (ReproduceArgs (params, f, pop)) = do
-    pop' <- evolve params f matchups2 pop
+    pop' <- evolve params f (matchups 2 . S.fromDistinctAscList) pop
     let args' = ReproduceArgs (params, f, pop')
     len <- prop_reproduceLength args'
     ids <- prop_reproduceIds args'

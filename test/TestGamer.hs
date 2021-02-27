@@ -4,6 +4,7 @@ module TestGamer where
 import           Data.List                      ( stripPrefix )
 import qualified Data.Map.Strict               as Map
 import           Data.Maybe                     ( fromMaybe )
+import qualified Data.Set                      as S
 import qualified Data.Vector                   as V
 import           Evolution                      ( Agent(..)
                                                 , EvolutionParams(..)
@@ -36,7 +37,7 @@ import           Test.QuickCheck                ( Gen
 import           Text.Regex.TDFA                ( (=~) )
 import           Util                           ( (<<)
                                                 , combineWith
-                                                , matchups2
+                                                , matchups
                                                 )
 
 
@@ -46,9 +47,15 @@ prop_evolveFitness gParams eParams@EvolutionParams {..} = do
         avgFit =
             combineWith (/)
                 . map (realToFrac .)
-                $ [sum . map agentFitness . getFitness game . matchups2, length]
+                $ [ sum
+                  . map agentFitness
+                  . getFitness game
+                  . matchups 2
+                  . S.fromDistinctAscList
+                  , length
+                  ]
     pop  <- newPlayers gParams { gamerActions = 2 } evolvePopSize
-    pop' <- evolve eParams game matchups2 pop
+    pop' <- evolve eParams game (matchups 2 . S.fromDistinctAscList) pop
     let dFit = avgFit pop' - avgFit pop
     return
         . counterexample ("dFit = " ++ show dFit)

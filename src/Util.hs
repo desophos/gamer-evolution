@@ -1,11 +1,12 @@
 module Util where
 
 import           Data.Char                      ( digitToInt )
-import           Data.List                      ( nubBy
-                                                , sort
+import           Data.List                      ( sort
+                                                , tails
                                                 )
 import qualified Data.Map.Strict               as Map
 import qualified Data.Set                      as S
+import qualified Data.Vector                   as V
 import           GHC.List                       ( foldl1' )
 import           Numeric                        ( readInt )
 import           Text.Printf                    ( printf )
@@ -67,12 +68,32 @@ unique (x : xs) = x `notElem` xs && unique xs
 sameMatch :: (Ord a) => [a] -> [a] -> Bool
 sameMatch xs ys = S.fromList xs == S.fromList ys
 
--- | Returns all unique pairs (length-2 combinations) in a list.
--- >>> matchups2 "abcd"
--- ["ab","ac","ad","bc","bd","cd"]
-matchups2 :: (Ord a) => [a] -> [[a]]
-matchups2 xs = nubBy swappedPair [ [x, y] | x <- xs, y <- xs, x /= y ]
-    where swappedPair xs [x, y] = xs == [y, x]
+-- | Returns `[]` if `n > length items`.
+-- | Complexity of repeated calls with the same `n` and `k`: 
+-- `O( n! / k!(n-k)! )` where `n = size items`
+-- | Adapted from https://rosettacode.org/wiki/Combinations#Haskell.
+
+-- >>> matchups 3 $ S.fromDistinctAscList ['a'..'e']
+-- ["abc","abd","abe","acd","ace","ade","bcd","bce","bde","cde"]
+
+-- Data.Vector.! is O(1), so converting `items` to Vector allows us 
+-- to memoize the expensive work of finding combinations
+-- by calculating the combination indexes once per (n, length itemsV) pair
+-- and using those indexes to generate the combinations of items.
+matchups
+    :: Ord a
+    => Int -- ^ Combination length (`1 < k <= size items`).
+    -> S.Set a -- ^ Set to find combinations in (`items`).
+    -> [[a]] -- ^ All unique length-n combinations in `items`.
+matchups k items = if k < 0
+    then error $ "Util.matchups k must be >= 0. k = " ++ show k
+    else map (map (itemsV V.!)) combIndexes
+  where
+    itemsV = V.fromList . S.toAscList $ items
+    combIndexes =
+        (memoize . memoize) (\x -> comb [0 .. x - 1]) (length itemsV) k
+    comb _  0 = [[]]
+    comb xs m = [ y : zs | y : ys <- tails xs, zs <- comb ys (m - 1) ]
 
 (<<) :: Monad m => m a -> m b -> m a
 (<<) = flip (>>)

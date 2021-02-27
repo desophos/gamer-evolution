@@ -1,6 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 module Main where
 
+import qualified Data.Set                      as S
 import           Evolution
 import           Gamer
 import           Test.QuickCheck
@@ -16,6 +17,6 @@ main =
                 gamerMemory  = 1
         players  = map agentGenome <$> newPlayers params 20
         runMatch = playGame dilemma 3
-        matches  = fmap matchups2 players
+        matches  = fmap (matchups 2 . S.fromDistinctAscList) players
         results  = map runMatch <$> matches
     in  print =<< generate results
