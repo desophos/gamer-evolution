@@ -71,7 +71,7 @@ analyzeEvolveFitness = do
     stdout' <- hDuplicate stdout
     file    <- openFile filename WriteMode
     hDuplicateTo file stdout
-    verboseCheck prop_evolveFitness
+    verboseCheck $ withMaxSuccess 500 prop_evolveFitness
     hClose file
     text <- readFile filename
 
