@@ -143,7 +143,7 @@ mutate pMutate opts = f
     f []       = pure []
     f (x : xs) = do
         p   <- choose (0, 1)
-        x'  <- if p <= pMutate then elements (opts `omit` x) else pure x
+        x'  <- if p < pMutate then elements (opts `omit` x) else pure x
         xs' <- f xs
         return (x' : xs')
 
