@@ -7,7 +7,10 @@ import           Test.Invariant                 ( inverts )
 import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , CoArbitrary
                                                 , Gen
-                                                , NonNegative(getNonNegative)
+                                                , NonNegative
+                                                    ( NonNegative
+                                                    , getNonNegative
+                                                    )
                                                 , chooseInt
                                                 , listOf1
                                                 , quickCheckAll
@@ -72,8 +75,8 @@ prop_matchupsLength (MatchupsArgs (n, xs)) =
     all ((== n) . length) (matchups n xs)
 
 prop_bcdRoundtrip :: NonNegative Int -> NonNegative Int -> Bool
-prop_bcdRoundtrip n =
-    (decodeBcd `inverts` encodeBcd (getNonNegative n)) . getNonNegative
+prop_bcdRoundtrip (NonNegative n) =
+    (decodeBcd `inverts` encodeBcd n) . getNonNegative
 
 
 return []
