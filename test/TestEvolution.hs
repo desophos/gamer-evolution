@@ -7,17 +7,30 @@ import           Evolution                      ( Agent(..)
                                                 , EvolutionParams(..)
                                                 , evolve
                                                 , mergeAgents
+                                                , mutate
                                                 , newPopulation
                                                 , reproduce
                                                 )
 import           Instances                      ( )
+import           Statistics.ConfidenceInt       ( binomialCI )
+import           Statistics.Types               ( ConfInt(ConfInt)
+                                                , Estimate(Estimate)
+                                                , cl95
+                                                )
 import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , CoArbitrary
                                                 , Gen
                                                 , NonNegative(getNonNegative)
                                                 , NonPositive(getNonPositive)
                                                 , Positive(getPositive)
+                                                , Property
+                                                , choose
+                                                , cover
+                                                , elements
+                                                , listOf1
                                                 , quickCheckAll
+                                                , suchThat
+                                                , vectorOf
                                                 )
 import           Util                           ( matchups
                                                 , unique
@@ -35,6 +48,15 @@ instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Re
         -- necessary because fitnesses are passed as weights to `frequency`
         f                           <- (arbitrary :: Gen (a -> Positive Int))
         return $ ReproduceArgs (params, map (getPositive . f), agents)
+
+newtype MutateArgs = MutateArgs (Double, [Char], String) deriving (Show, Eq)
+
+instance Arbitrary MutateArgs where
+    arbitrary = do
+        p      <- choose (0, 1)
+        genes  <- listOf1 arbitrary `suchThat` ((> 1) . length)
+        genome <- vectorOf 1000 (elements genes)
+        return $ MutateArgs (p, genes, genome)
 
 
 newPop :: (Arbitrary a) => Int -> Agent a -> Gen [Agent a]
@@ -74,6 +96,16 @@ prop_newPopulationUniform n agent c = do
         fEq f = f x == f y
         enc z = agentEncoder z c
         dec z = agentDecoder z $ enc z
+
+prop_mutate :: MutateArgs -> Gen Property
+prop_mutate (MutateArgs (p, genes, genome)) = do
+    mutated <- mutate p genes genome
+    let Estimate p' (ConfInt lower upper _) = binomialCI
+            cl95
+            (length genome)
+            (length $ filter (uncurry (/=)) (zip genome mutated))
+    -- proportion of mutations == p with 95% confidence
+    return $ cover 95 ((p > p' - lower) && (p < p' + upper)) "near p" True
 
 prop_reproduceLength :: ReproduceArgs a -> Gen Bool
 prop_reproduceLength (ReproduceArgs (params, f, pop)) = do

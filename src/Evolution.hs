@@ -4,6 +4,7 @@ module Evolution
     ( Agent(..)
     , EvolutionParams(..)
     , newPopulation
+    , mutate
     , reproduce
     , evolve
     , mergeAgents
