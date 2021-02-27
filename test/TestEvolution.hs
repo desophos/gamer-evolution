@@ -87,10 +87,10 @@ prop_newPopulationUniform
     :: (Eq a, Arbitrary a) => NonNegative Int -> Agent a -> a -> Gen Bool
 prop_newPopulationUniform n agent c = do
     pop <- newPop (getNonNegative n) agent
-    return $ uniform agentCommon pop True
+    return $ uniform pop True
   where
-    uniform _ []       acc = acc
-    uniform f (x : xs) acc = uniform f xs (acc && all (f x) xs)
+    uniform []       acc = acc
+    uniform (x : xs) acc = uniform xs (acc && all (agentCommon x) xs)
     agentCommon x y = fEq enc && fEq dec
       where
         fEq f = f x == f y
