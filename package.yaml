@@ -21,14 +21,14 @@ description:         Please see the README on GitHub at <https://github.com/deso
 
 dependencies:
 - base >= 4.7 && < 5
-- QuickCheck == 2.14
+- QuickCheck >= 2.14 && < 2.15
 - mtl
 - containers
 - generic-random
 - test-invariant
 - regex-tdfa
 - vector
-- statistics
+- statistics >= 0.15.2 && < 0.16
 
 library:
   source-dirs: src
