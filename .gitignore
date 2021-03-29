@@ -5,3 +5,5 @@
 *.code-*
 .vscode
 *.prof
+*.png
+*.dat

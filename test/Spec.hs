@@ -9,5 +9,5 @@ import qualified TestUtil                      as U
 
 main :: IO ()
 main = do
-    good <- and <$> sequence [U.runTests, E.runTests, G.runTests, G.analyzeEvolveFitness]
+    good <- and <$> sequence [U.runTests, E.runTests, G.runTests, G.analyzeEvolveFitness, G.graphEvolveFitness]
     if good then exitSuccess else exitFailure

@@ -1,23 +1,36 @@
 {-# LANGUAGE TemplateHaskell, RecordWildCards #-}
 module TestGamer where
 
-import           Data.List                      ( stripPrefix )
+import           Data.List                      ( foldl1'
+                                                , stripPrefix
+                                                )
 import qualified Data.Map.Strict               as Map
 import           Data.Maybe                     ( fromMaybe )
 import qualified Data.Set                      as S
 import qualified Data.Vector                   as V
 import           Evolution                      ( Agent(..)
                                                 , EvolutionParams(..)
+                                                , collectEvolve
                                                 , evolve
                                                 , getFitness
+                                                )
+import           GHC.Float                      ( float2Int
+                                                , int2Float
                                                 )
 import           GHC.IO.Handle                  ( hDuplicate
                                                 , hDuplicateTo
                                                 )
 import           Gamer                          ( GamerParams(..)
+                                                , PlayerState
                                                 , dilemma
                                                 , newPlayers
                                                 , playGame
+                                                )
+import           Graphics.EasyPlot              ( Graph2D(Function2D)
+                                                , Option(Title)
+                                                , Option2D(Range, Step)
+                                                , Plot(plot)
+                                                , TerminalType(PNG)
                                                 )
 import           Statistics.Sample              ( correlation )
 import           System.IO                      ( IOMode(WriteMode)
@@ -28,9 +41,12 @@ import           System.IO                      ( IOMode(WriteMode)
                                                 )
 import           Test.QuickCheck                ( Gen
                                                 , Property
+                                                , arbitrary
                                                 , counterexample
                                                 , cover
+                                                , generate
                                                 , quickCheckAll
+                                                , vectorOf
                                                 , verboseCheck
                                                 , withMaxSuccess
                                                 )
@@ -87,6 +103,29 @@ analyzeEvolveFitness = do
         (hPutStrLn stdout')
         ("correlations:" : [ k ++ " = " ++ show v | (k, v) <- Map.assocs rs ])
     return True
+
+
+graphEvolveFitness :: IO Bool
+graphEvolveFitness = do
+    runs <- generate $ vectorOf
+        10
+        (arbitrary >>= \x -> arbitrary >>= \y -> genCollectEvolve x y)
+    let avgRun = mergeRuns $ map (map avgFit) runs
+    plot (PNG "plot.png") $ Function2D
+        [Title "Average Fitness"]
+        [Range 0 (int2Float $ length avgRun - 1), Step 1]
+        ((avgRun !!) . float2Int)
+  where
+    avgFit :: [Agent a] -> Float
+    avgFit = combineWith (/) [sum . map agentFitness, realToFrac . length]
+    mergeRuns :: [[Float]] -> [Float]
+    mergeRuns = foldl1' (zipWith (\x y -> (x + y) / 2))
+    game      = playGame dilemma 5
+    genCollectEvolve
+        :: GamerParams -> EvolutionParams -> Gen [[Agent [PlayerState]]]
+    genCollectEvolve gParams eParams@EvolutionParams {..} = do
+        pop <- newPlayers gParams { gamerActions = 2 } evolvePopSize
+        collectEvolve eParams game (matchups 2 . S.fromDistinctAscList) pop
 
 
 return []

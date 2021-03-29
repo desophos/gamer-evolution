@@ -7,10 +7,12 @@ module Evolution
     , mutate
     , reproduce
     , evolve
+    , collectEvolve
     , mergeAgents
     , getFitness
     ) where
 
+import           Control.Applicative            ( liftA2 )
 import qualified Data.ByteString.Lazy          as B
 import           Data.List                      ( sort
                                                 , sortOn
@@ -211,3 +213,19 @@ evolve params@EvolutionParams {..} f matchup pop = evolve'
   where
     reproduce' = reproduce params f matchup
     evolve' xs n = if n <= 0 then xs else evolve' (reproduce' =<< xs) (n - 1)
+
+collectEvolve
+    :: EvolutionParams
+    -> ([a] -> [Float])
+    -> ([Agent a] -> [[Agent a]])
+    -> [Agent a]
+    -> Gen [[Agent a]]
+collectEvolve params@EvolutionParams {..} f matchup pop = evolve'
+    (pure [])
+    (pure pop)
+    evolveGenerations
+  where
+    reproduce' = reproduce params f matchup
+    evolve' acc xs n = if n <= 0
+        then reverse <$> liftA2 (:) xs acc
+        else evolve' (liftA2 (:) xs acc) (reproduce' =<< xs) (n - 1)
