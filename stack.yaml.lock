@@ -46,6 +46,13 @@ packages:
       sha256: 1b4d8a26ba0790aca64ac35d358beba47304438442840adcbedd3381888ba838
   original:
     hackage: uuid-types-1.0.4
+- completed:
+    hackage: mono-traversable-1.0.15.1@sha256:cad0e8681cd6c96d3303867fc68c80e2f5d55c2c4bf5277c06ca74402fda61c8,2230
+    pantry-tree:
+      size: 761
+      sha256: c9950f4b3409f0e198e6f074abd51b59b0b238b4919b3f6acd0091a3779f2fe2
+  original:
+    hackage: mono-traversable-1.0.15.1
 snapshots:
 - completed:
     size: 525662

@@ -29,6 +29,9 @@ dependencies:
 - regex-tdfa
 - vector
 - statistics >= 0.15.2 && < 0.16
+- digits >= 0.3 && < 1
+- bytestring
+- mono-traversable >= 1 && < 2
 
 library:
   source-dirs: src
