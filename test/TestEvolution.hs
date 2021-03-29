@@ -35,7 +35,8 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , suchThat
                                                 , vectorOf
                                                 )
-import           Util                           ( matchups
+import           Util                           ( combineWith
+                                                , matchups
                                                 , unique
                                                 )
 
@@ -56,8 +57,9 @@ newtype MutateArgs = MutateArgs (Double, [Word8], B.ByteString) deriving (Show, 
 
 instance Arbitrary MutateArgs where
     arbitrary = do
-        p      <- choose (0, 1)
-        genes  <- listOf1 arbitrary `suchThat` ((> 1) . length)
+        p     <- choose (0, 1)
+        genes <- listOf1 arbitrary
+            `suchThat` combineWith (&&) [unique, (> 1) . length]
         genome <- B.pack <$> vectorOf 1000 (elements genes)
         return $ MutateArgs (p, genes, genome)
 

@@ -35,6 +35,7 @@ import           Test.QuickCheck.Gen            ( chooseInt64 )
 import           Util                           ( combineWith
                                                 , mergeAll
                                                 , omit
+                                                , unique
                                                 )
 
 
@@ -82,8 +83,9 @@ instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
         let flip3 f x y z = f z y x
             agentId      = 0
             agentFitness = 0
-        agentGenome  <- arbitrary
-        agentGenes   <- arbitrary `suchThat` ((> 1) . length)
+        agentGenome <- arbitrary
+        agentGenes  <- arbitrary
+            `suchThat` combineWith (&&) [unique, (> 1) . length]
         agentEncoder <-
             (B.pack .)
             <$>        arbitrary
