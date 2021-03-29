@@ -37,7 +37,7 @@ import           Util                           ( matchups
                                                 )
 
 
-newtype ReproduceArgs a = ReproduceArgs (EvolutionParams, [a] -> [Int], [Agent a]) deriving (Show)
+newtype ReproduceArgs a = ReproduceArgs (EvolutionParams, [a] -> [Float], [Agent a]) deriving (Show)
 
 instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (ReproduceArgs a) where
     arbitrary = do
@@ -46,7 +46,7 @@ instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Re
         -- generate a fitness fn that strictly increases fitness
         -- fitness starts at 0 so this also guarantees fitness will be > 0
         -- necessary because fitnesses are passed as weights to `frequency`
-        f                           <- (arbitrary :: Gen (a -> Positive Int))
+        f                           <- (arbitrary :: Gen (a -> Positive Float))
         return $ ReproduceArgs (params, map (getPositive . f), agents)
 
 newtype MutateArgs = MutateArgs (Double, [Char], String) deriving (Show, Eq)

@@ -54,14 +54,14 @@ data PlayerState = PlayerState
 data GameState = GameState
     { gameStates    :: ![PlayerState]
     , gameHistories :: ![[Int]]
-    , gameScores    :: ![Int]
+    , gameScores    :: ![Float]
     }
     deriving (Ord, Eq, Show)
 
 
 -- | Reward matrix for the Prisoner's Dilemma.
 -- 0 = cooperate; 1 = defect
-dilemma :: [Int] -> [Int]
+dilemma :: [Int] -> [Float]
 dilemma [0, 0] = [3, 3]
 dilemma [1, 0] = [5, 0]
 dilemma [0, 1] = [0, 5]
@@ -212,10 +212,10 @@ stepPlayer genome opponentHistory = do
     return $ stateAction next
 
 stepGame
-    :: ([Int] -> [Int]) -- ^ The game being played.
+    :: ([Int] -> [Float]) -- ^ The game being played.
     -> Int -- ^ Number of rounds to play.
     -> [[PlayerState]] -- ^ List of FSM players.
-    -> State GameState [Int]
+    -> State GameState [Float]
 stepGame _ 0 _ = do
     GameState {..} <- get
     return gameScores
@@ -235,10 +235,10 @@ stepGame game n players = do
     stepGame game (n - 1) players
 
 playGame
-    :: ([Int] -> [Int]) -- ^ The game being played. Must preserve list length.
+    :: ([Int] -> [Float]) -- ^ The game being played. Must preserve list length.
     -> Int -- ^ Number of rounds to play.
     -> [[PlayerState]] -- ^ List of FSM players.
-    -> [Int]
+    -> [Float]
 playGame game n players =
     let gameStates    = map head players
         actions       = map stateAction gameStates

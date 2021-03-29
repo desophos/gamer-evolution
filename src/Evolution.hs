@@ -14,9 +14,7 @@ module Evolution
 import           Data.List                      ( sort
                                                 , sortOn
                                                 )
-import           GHC.Float.RealFracMethods      ( floorDoubleInt
-                                                , roundDoubleInt
-                                                )
+import           GHC.Float.RealFracMethods      ( roundDoubleInt )
 import           GHC.Generics                   ( Generic )
 import           Test.Invariant                 ( inverts )
 import           Test.QuickCheck                ( Arbitrary(arbitrary)
@@ -63,7 +61,7 @@ instance Arbitrary EvolutionParams where
 
 data Agent a = Agent
     { agentId      :: !Int
-    , agentFitness :: !Int
+    , agentFitness :: !Float
     , agentGenome  :: !a
     , agentGenes   :: ![Char] -- ^ The possible characters that make up the encoded genome. Length should be >= 2.
     , agentEncoder :: !(a -> String)
@@ -93,18 +91,18 @@ instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
 withId :: Agent a -> Int -> Agent a
 withId x i = x { agentId = i }
 
-withFitness :: Agent a -> Int -> Agent a
+withFitness :: Agent a -> Float -> Agent a
 withFitness x i = x { agentFitness = i }
 
 
--- | Merges agents by ID, combining fitness.
+-- | Merges agents by ID, averaging fitness.
 mergeAgents :: [Agent a] -> [Agent a]
 mergeAgents = mergeAll f . sort
-    where f x y = x { agentFitness = agentFitness x + agentFitness y }
+    where f x y = x { agentFitness = (agentFitness x + agentFitness y) / 2 }
 
 -- | Runs a fitness function on a population of agents.
 getFitness
-    :: ([a] -> [Int]) -- ^ Fitness function.
+    :: ([a] -> [Float]) -- ^ Fitness function.
     -> [[Agent a]] -- ^ Agent "matchups" to pass to the fitness function.
     -> [Agent a] -- ^ The population with updated agentFitness.
 getFitness f = mergeAgents . concatMap applyScores
@@ -164,7 +162,7 @@ crossover EvolutionParams {..} x y = do
 
 reproduce
     :: EvolutionParams
-    -> ([a] -> [Int]) -- ^ Fitness function to determine Agents' likelihood to reproduce. Must preserve list length.
+    -> ([a] -> [Float]) -- ^ Fitness function to determine Agents' likelihood to reproduce. Must preserve list length.
     -> ([Agent a] -> [[Agent a]]) -- ^ Given the population, produces the list of groups passed to the fitness fn.
     -> [Agent a] -- ^ The population of Agents to reproduce.
     -> Gen [Agent a] -- ^ The population with non-surviving Agents replaced by children produced by genetic crossover.
@@ -177,7 +175,7 @@ reproduce params@EvolutionParams {..} f matchup pop = (survived ++) <$> births
             . getFitness f
             . matchup
             $ pop
-    fitPairs xs = zip (map agentFitness xs) (map pure xs)
+    fitPairs xs = zip (map (ceiling . agentFitness) xs) (map pure xs)
     pickFit = frequency . fitPairs
     mate    = do
         x <- pickFit survived
@@ -190,7 +188,7 @@ reproduce params@EvolutionParams {..} f matchup pop = (survived ++) <$> births
 -- | Evolves a population over a number of generations. See `reproduce`.
 evolve
     :: EvolutionParams
-    -> ([a] -> [Int])
+    -> ([a] -> [Float])
     -> ([Agent a] -> [[Agent a]])
     -> [Agent a]
     -> Gen [Agent a]
