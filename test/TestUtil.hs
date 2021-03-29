@@ -71,7 +71,7 @@ prop_sameMatchFlip xs ys = sameMatch xs ys == sameMatch ys xs
 prop_matchupsUnique :: Ord a => MatchupsArgs a -> Bool
 prop_matchupsUnique (MatchupsArgs (n, xs)) = unique $ matchups n xs
 
-prop_matchupsLength :: Ord a => MatchupsArgs a -> Bool
+prop_matchupsLength :: MatchupsArgs a -> Bool
 prop_matchupsLength (MatchupsArgs (n, xs)) =
     all ((== n) . length) (matchups n xs)
 

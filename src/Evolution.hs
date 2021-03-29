@@ -23,7 +23,6 @@ import           Test.Invariant                 ( inverts )
 import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , CoArbitrary
                                                 , Gen
-                                                , Positive
                                                 , choose
                                                 , chooseInt
                                                 , elements
@@ -86,6 +85,8 @@ instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
         agentGenome <- arbitrary
         agentGenes  <- arbitrary
             `suchThat` combineWith (&&) [unique, (> 1) . length]
+        -- ByteString has no Arbitrary instance 
+        -- so generate functions over [Word8] instead
         agentEncoder <-
             (B.pack .)
             <$>        arbitrary
@@ -175,9 +176,14 @@ reproduce
     -> ([a] -> [Float]) -- ^ Fitness function to determine Agents' likelihood to reproduce. Must preserve list length.
     -> ([Agent a] -> [[Agent a]]) -- ^ Given the population, produces the list of groups passed to the fitness fn.
     -> [Agent a] -- ^ The population of Agents to reproduce.
-    -> Gen [Agent a] -- ^ The population with non-surviving Agents replaced by children produced by genetic crossover.
-reproduce params@EvolutionParams {..} f matchup pop = (survived ++) <$> births
+    -> Gen [Agent a] -- ^ The population with non-surviving Agents replaced by children produced by sexual reproduction.
+reproduce params@EvolutionParams {..} f matchup pop = do
+    births <- vectorOf nBirth mate
+    let births' = zipWith withId births (nextIds survived)
+    return $ survived ++ births'
   where
+    nBirth  = length pop - evolveSurvivors
+    nextIds = iterate (+ 1) . (+ 1) . agentId . last
     survived =
         sortOn agentId
             . take evolveSurvivors
@@ -191,11 +197,8 @@ reproduce params@EvolutionParams {..} f matchup pop = (survived ++) <$> births
         x <- pickFit survived
         y <- pickFit $ survived `omit` x
         crossover params x y
-    nBirth  = length pop - evolveSurvivors
-    nextIds = iterate (+ 1) . (+ 1) . agentId . last $ survived
-    births  = flip (zipWith withId) nextIds . replicate nBirth <$> mate
 
--- | Evolves a population over a number of generations. See `reproduce`.
+-- | Evolves a population over a number of generations. See 'reproduce'.
 evolve
     :: EvolutionParams
     -> ([a] -> [Float])

@@ -93,7 +93,7 @@ unique (x : xs) = x `notElem` xs && unique xs
 
 -- | True if the lists share all elements in any order.
 -- Duplicate elements are combined.
-sameMatch :: (Ord a) => [a] -> [a] -> Bool
+sameMatch :: Ord a => [a] -> [a] -> Bool
 sameMatch xs ys = S.fromList xs == S.fromList ys
 
 -- | Returns `[]` if `n > length items`.
@@ -109,8 +109,7 @@ sameMatch xs ys = S.fromList xs == S.fromList ys
 -- by calculating the combination indexes once per (n, length itemsV) pair
 -- and using those indexes to generate the combinations of items.
 matchups
-    :: Ord a
-    => Int -- ^ Combination length (`1 < k <= size items`).
+    :: Int -- ^ Combination length (`1 < k <= size items`).
     -> S.Set a -- ^ Set to find combinations in (`items`).
     -> [[a]] -- ^ All unique length-n combinations in `items`.
 matchups k items = if k < 0

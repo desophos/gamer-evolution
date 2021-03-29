@@ -20,7 +20,6 @@ import qualified Data.ByteString.Lazy          as B
 import           Evolution                      ( Agent
                                                 , newPopulation
                                                 )
-import           Test.Invariant                 ( inverts )
 import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , Gen
                                                 , choose

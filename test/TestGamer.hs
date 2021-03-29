@@ -35,8 +35,7 @@ import           Test.QuickCheck                ( Gen
                                                 , withMaxSuccess
                                                 )
 import           Text.Regex.TDFA                ( (=~) )
-import           Util                           ( (<<)
-                                                , combineWith
+import           Util                           ( combineWith
                                                 , matchups
                                                 )
 
@@ -44,16 +43,15 @@ import           Util                           ( (<<)
 prop_evolveFitness :: GamerParams -> EvolutionParams -> Gen Property
 prop_evolveFitness gParams eParams@EvolutionParams {..} = do
     let game = playGame dilemma 2
-        avgFit =
-            combineWith (/)
-                . map (realToFrac .)
-                $ [ sum
-                  . map agentFitness
-                  . getFitness game
-                  . matchups 2
-                  . S.fromDistinctAscList
-                  , length
-                  ]
+        avgFit = combineWith
+            (/)
+            [ sum
+            . map agentFitness
+            . getFitness game
+            . matchups 2
+            . S.fromDistinctAscList
+            , realToFrac . length
+            ]
     pop  <- newPlayers gParams { gamerActions = 2 } evolvePopSize
     pop' <- evolve eParams game (matchups 2 . S.fromDistinctAscList) pop
     let dFit = avgFit pop' - avgFit pop
@@ -85,9 +83,10 @@ analyzeEvolveFitness = do
         pairFit = Map.map $ V.zip (allData Map.! "dFit")
         rs      = Map.map correlation $ pairFit allData
 
-    return True << mapM_
+    mapM_
         (hPutStrLn stdout')
         ("correlations:" : [ k ++ " = " ++ show v | (k, v) <- Map.assocs rs ])
+    return True
 
 
 return []
