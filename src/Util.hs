@@ -1,23 +1,65 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Util where
 
+import qualified Data.ByteString.Lazy          as B
 import           Data.Char                      ( digitToInt )
 import           Data.List                      ( sort
                                                 , tails
                                                 )
 import qualified Data.Map.Strict               as Map
+import           Data.MonoTraversable           ( Element
+                                                , MonoFoldable(olength, onull)
+                                                )
 import qualified Data.Set                      as S
 import qualified Data.Vector                   as V
 import           GHC.List                       ( foldl1' )
 import           Numeric                        ( readInt )
 import           Text.Printf                    ( printf )
 
+class MonoFoldable a => Chunkable a where
+    bottom :: a
+    chunkAt :: Int -> a -> (a, a)
+    -- | Splits a Chunkable into multiple equal-length chunks.
+    chunk
+        :: Int -- ^ The size of the resulting chunks.
+        -> a -- ^ The Chunkable to split.
+        -> [a]
+    chunk size xs
+        | onull xs
+        = bottom
+        | size < 1
+        = error $ "Util.chunk size must be >= 1" ++ errSuffix
+        | size > olength xs
+        = error $ "Util.chunk size must be <= length" ++ errSuffix
+        | olength xs `rem` size /= 0
+        = error $ "Util.chunk size must divide length evenly" ++ errSuffix
+        | otherwise
+        = y : chunk size ys
+      where
+        (y, ys)   = chunkAt size xs
+        errSuffix = ". size = " ++ show size ++ "; length = " ++ show (olength xs)
+
+instance Chunkable [a] where
+    bottom  = []
+    chunkAt = splitAt
+instance Chunkable B.ByteString where
+    bottom  = B.empty
+    chunkAt = B.splitAt . fromIntegral
+
+class MonoFilterable mono where
+    ofilter :: (Element mono -> Bool) -> mono -> mono
+
+instance MonoFilterable [a] where
+    ofilter = filter
+instance MonoFilterable B.ByteString where
+    ofilter = B.filter
 
 omit
-    :: Eq a
-    => [a] -- ^ List to omit from.
-    -> a -- ^ Element to omit.
-    -> [a] -- ^ List without the omitted element.
-omit xs x = filter (/= x) xs
+    :: (MonoFilterable mono, Eq (Element mono))
+    => mono -- ^ Filterable to omit from.
+    -> Element mono -- ^ Element to omit.
+    -> mono -- ^ Filterable without the omitted element.
+omit xs x = ofilter (/= x) xs
 
 -- | Merges consecutive equal elements.
 -- Recommended to sort first.
@@ -37,25 +79,6 @@ merge f xs = mergeF xs []
 mergeAll :: Eq a => (a -> a -> a) -> [a] -> [a]
 mergeAll f xs = if merged == merge f merged then merged else mergeAll f merged
     where merged = merge f xs
-
--- | Splits a list into multiple equal-length lists.
-chunk
-    :: Int -- ^ The size of the resulting lists.
-    -> [a] -- ^ The list to split.
-    -> [[a]]
-chunk _ [] = []
-chunk size xs
-    | size < 1
-    = error $ "Util.chunk size must be >= 1" ++ errSuffix
-    | size > length xs
-    = error $ "Util.chunk size must be <= list length" ++ errSuffix
-    | length xs `rem` size /= 0
-    = error $ "Util.chunk size must divide list evenly" ++ errSuffix
-    | otherwise
-    = y : chunk size ys
-  where
-    (y, ys)   = splitAt size xs
-    errSuffix = ". size = " ++ show size ++ "; length = " ++ show (length xs)
 
 -- | True if the list contains no duplicates.
 unique :: Eq a => [a] -> Bool
