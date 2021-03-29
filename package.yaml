@@ -62,3 +62,11 @@ tests:
     - regex-tdfa
     - statistics >= 0.15 && < 1
     - easyplot
+
+  gamer-evolution-doctest:
+    main:        doctests.hs
+    source-dirs: src
+    ghc-options: *exe-ghc-options
+    dependencies:
+    - gamer-evolution
+    - doctest
