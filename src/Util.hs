@@ -1,8 +1,15 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Util where
 
+import           Data.ByteString.Builder        ( Builder
+                                                , intDec
+                                                )
 import qualified Data.ByteString.Lazy          as B
+import qualified Data.ByteString.Lazy.Char8    as C
 import           Data.Char                      ( digitToInt )
+import           Data.Digits                    ( digits
+                                                , unDigits
+                                                )
 import           Data.List                      ( sort
                                                 , tails
                                                 )
@@ -13,8 +20,6 @@ import           Data.MonoTraversable           ( Element
 import qualified Data.Set                      as S
 import qualified Data.Vector                   as V
 import           GHC.List                       ( foldl1' )
-import           Numeric                        ( readInt )
-import           Text.Printf                    ( printf )
 
 class MonoFoldable a => Chunkable a where
     bottom :: a
@@ -126,17 +131,24 @@ memoize :: (Int -> a) -> (Int -> a)
 memoize f = (map f [0 ..] !!)
 
 -- | Memoized over both parameters for better performance over many calls.
--- >>> encodeBcd 4 7
+-- >>> import Data.ByteString.Builder (toLazyByteString)
+-- >>> toLazyByteString $ encodeBcd 4 7
 -- "0111"
 encodeBcd
     :: Int -- ^ padding size
     -> Int -- ^ decimal to encode
-    -> String -- ^ the decimal converted to binary and right-adjusted with zeroes
-encodeBcd = memoize . memoize $ printf "%0*b"
+    -> Builder -- ^ the decimal converted to binary and right-adjusted with zeroes
+encodeBcd = (memoize . memoize)
+    (\width x ->
+        let encoded = digits 2 x
+            padding = replicate (max 0 (width - length encoded)) 0
+            bsify   = mconcat . map intDec
+        in  bsify padding <> bsify encoded
+    )
 
 -- | Given a string of binary digits, returns the number as a decimal Int.
-decodeBcd :: String -> Int
-decodeBcd = fst . head . readInt 2 (`elem` ['0', '1']) digitToInt
+decodeBcd :: B.ByteString -> Int
+decodeBcd = unDigits 2 . map digitToInt . C.unpack
 
 -- | Apply a list of functions to the same input
 -- and combine their outputs.

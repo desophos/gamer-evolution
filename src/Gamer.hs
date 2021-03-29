@@ -12,6 +12,11 @@ import           Control.Monad.State            ( MonadState(get, put)
                                                 , evalState
                                                 , runState
                                                 )
+import           Data.ByteString.Builder        ( Builder
+                                                , intDec
+                                                , toLazyByteString
+                                                )
+import qualified Data.ByteString.Lazy          as B
 import           Evolution                      ( Agent
                                                 , newPopulation
                                                 )
@@ -24,6 +29,7 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
 import           Util                           ( chunk
                                                 , decodeBcd
                                                 , encodeBcd
+                                                , memoize
                                                 )
 
 
@@ -75,59 +81,66 @@ dilemma [1, 1] = [1, 1]
 -- >>> bcdLen 16
 -- 4
 bcdLen :: Int -> Int
-bcdLen = length . encodeBcd 0 . subtract 1
+bcdLen =
+    memoize
+        $ fromIntegral
+        . B.length
+        . toLazyByteString
+        . encodeBcd 0
+        . subtract 1
 
 
 prop_encodedLen :: GamerParams -> Gen Bool
 prop_encodedLen params@GamerParams {..} = do
     tree <- randomStateTransitionTree params
     let encoded = encodeTransitions params tree
-    return $ 0 == length encoded `rem` bcdLen gamerStates
+        bsLen   = fromIntegral . B.length . toLazyByteString
+    return $ 0 == bsLen encoded `rem` bcdLen gamerStates
 
 -- prop> \(params :: GamerParams) -> prop_encodedLen params
 -- +++ OK, passed 100 tests.
-encodeTransitions :: GamerParams -> StateTransitionTree -> String
+encodeTransitions :: GamerParams -> StateTransitionTree -> Builder
 encodeTransitions GamerParams {..} (NextState i) =
     encodeBcd (bcdLen gamerStates) i
 encodeTransitions params (Reactions ts) =
-    concatMap (encodeTransitions params) ts
+    mconcat $ map (encodeTransitions params) ts
 
 -- prop> \(params :: GamerParams) -> (decodeTransitions params) `inverts` (encodeTransitions params) <$> randomStateTransitionTree params
 -- +++ OK, passed 100 tests.
-decodeTransitions :: GamerParams -> String -> StateTransitionTree
+decodeTransitions :: GamerParams -> B.ByteString -> StateTransitionTree
 decodeTransitions GamerParams {..} =
     let buildTree xs = if length xs == gamerActions
             then Reactions xs
             else buildTree (map Reactions . chunk gamerActions $ xs)
     in  buildTree . map (NextState . decodeBcd) . chunk (bcdLen gamerStates)
 
-encodeState :: GamerParams -> PlayerState -> String
+encodeState :: GamerParams -> PlayerState -> Builder
 encodeState params@GamerParams {..} PlayerState {..} =
     encodeBcd (bcdLen gamerActions) stateAction
-        ++ encodeTransitions params stateTransitions
+        <> encodeTransitions params stateTransitions
 
 -- prop> \(params :: GamerParams) -> (decodeState params) `inverts` (encodeState params) <$> randomState params
 -- +++ OK, passed 100 tests.
-decodeState :: GamerParams -> String -> PlayerState
+decodeState :: GamerParams -> B.ByteString -> PlayerState
 decodeState params@GamerParams {..} s = PlayerState { .. }  where
-    (action, transitions) = splitAt (bcdLen gamerActions) s
+    (action, transitions) = B.splitAt (fromIntegral $ bcdLen gamerActions) s
     stateAction           = decodeBcd action
     stateTransitions      = decodeTransitions params transitions
 
 prop_encodeUniformLen :: GamerParams -> Gen Bool
 prop_encodeUniformLen params = do
-    let encodedLen = length . encodeGenome params <$> randomGenome params
+    let encodedLen = B.length . encodeGenome params <$> randomGenome params
     cs <- vectorOf 20 encodedLen
     return $ all (head cs ==) cs
 
 -- prop> \(params :: GamerParams) -> prop_encodeUniformLen params
 -- +++ OK, passed 100 tests.
-encodeGenome :: GamerParams -> [PlayerState] -> String
-encodeGenome params = concatMap (encodeState params)
+encodeGenome :: GamerParams -> [PlayerState] -> B.ByteString
+encodeGenome params = toLazyByteString . mconcat . map (encodeState params)
 
 -- prop> \(params :: GamerParams) -> (decodeGenome params) `inverts` (encodeGenome params) <$> randomGenome params
 -- +++ OK, passed 100 tests.
-decodeGenome :: GamerParams -> String -> [PlayerState]
+decodeGenome :: GamerParams -> B.ByteString -> [PlayerState]
 decodeGenome params@GamerParams {..} = map (decodeState params)
     . chunk stateBcdLen
   where
@@ -169,11 +182,12 @@ newPlayers
     :: GamerParams
     -> Int -- ^ Number of agents to generate.
     -> Gen [Agent [PlayerState]]
-newPlayers params n = newPopulation n
-                                    "01"
-                                    (encodeGenome params)
-                                    (decodeGenome params)
-                                    (randomGenome params)
+newPlayers params n = newPopulation
+    n
+    (B.unpack . toLazyByteString . mconcat $ map intDec [0, 1])
+    (encodeGenome params)
+    (decodeGenome params)
+    (randomGenome params)
 
 
 -- | Returns the index of the next PlayerState.

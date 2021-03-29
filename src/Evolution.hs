@@ -11,9 +11,12 @@ module Evolution
     , getFitness
     ) where
 
+import qualified Data.ByteString.Lazy          as B
 import           Data.List                      ( sort
                                                 , sortOn
                                                 )
+import           Data.MonoTraversable           ( MonoTraversable(omapM) )
+import           Data.Word                      ( Word8 )
 import           GHC.Float.RealFracMethods      ( roundDoubleInt )
 import           GHC.Generics                   ( Generic )
 import           Test.Invariant                 ( inverts )
@@ -28,6 +31,7 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , suchThat
                                                 , vectorOf
                                                 )
+import           Test.QuickCheck.Gen            ( chooseInt64 )
 import           Util                           ( combineWith
                                                 , mergeAll
                                                 , omit
@@ -63,9 +67,9 @@ data Agent a = Agent
     { agentId      :: !Int
     , agentFitness :: !Float
     , agentGenome  :: !a
-    , agentGenes   :: ![Char] -- ^ The possible characters that make up the encoded genome. Length should be >= 2.
-    , agentEncoder :: !(a -> String)
-    , agentDecoder :: !(String -> a)
+    , agentGenes   :: ![Word8] -- ^ The possible characters that make up the encoded genome. Length should be >= 2.
+    , agentEncoder :: !(a -> B.ByteString)
+    , agentDecoder :: !(B.ByteString -> a)
     }
     deriving Generic
 
@@ -81,9 +85,15 @@ instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
         agentGenome  <- arbitrary
         agentGenes   <- arbitrary `suchThat` ((> 1) . length)
         agentEncoder <-
-            arbitrary `suchThat` (\f -> all (`elem` agentGenes) (f agentGenome))
+            (B.pack .)
+            <$>        arbitrary
+            `suchThat` (\f -> B.all (`elem` agentGenes)
+                                    (B.pack . f $ agentGenome)
+                       )
         agentDecoder <-
-            arbitrary `suchThat` flip3 inverts agentGenome agentEncoder
+            (. B.unpack)
+            <$>        arbitrary
+            `suchThat` (\f -> inverts (f . B.unpack) agentEncoder agentGenome)
         return Agent { .. }
 
 
@@ -111,7 +121,8 @@ getFitness f = mergeAgents . concatMap applyScores
     applyScores xs = zipWith withFitness xs (getScores xs)
 
 
-newAgent :: (a -> String) -> (String -> a) -> [Char] -> a -> Agent a
+newAgent
+    :: (a -> B.ByteString) -> (B.ByteString -> a) -> [Word8] -> a -> Agent a
 newAgent agentEncoder agentDecoder agentGenes agentGenome = Agent { .. }
   where
     agentId      = 0
@@ -120,9 +131,9 @@ newAgent agentEncoder agentDecoder agentGenes agentGenome = Agent { .. }
 -- | Returns a population of agents with incremental IDs.
 newPopulation
     :: Int -- ^ Number of agents to generate.
-    -> [Char] -- ^ Possible genes that make up the encoded genome.
-    -> (a -> String) -- ^ Encodes an agent's genome.
-    -> (String -> a) -- ^ Decodes an agent's genome. Should invert the encoder.
+    -> [Word8] -- ^ Possible genes that make up the encoded genome.
+    -> (a -> B.ByteString) -- ^ Encodes an agent's genome.
+    -> (B.ByteString -> a) -- ^ Decodes an agent's genome. Should invert the encoder.
     -> Gen a -- ^ Genome generator.
     -> Gen [Agent a]
 newPopulation n genes enc dec genome = do
@@ -133,17 +144,14 @@ newPopulation n genes enc dec genome = do
 
 mutate
     :: Double -- ^ Probability per gene of mutation.
-    -> [Char] -- ^ Possible genes to mutate into.
-    -> String -- ^ The genome to mutate.
-    -> Gen String
-mutate pMutate opts = f
+    -> [Word8] -- ^ Possible genes to mutate into.
+    -> B.ByteString -- ^ The genome to mutate.
+    -> Gen B.ByteString
+mutate pMutate genes = omapM f
   where
-    f []       = pure []
-    f (x : xs) = do
-        p   <- choose (0, 1)
-        x'  <- if p < pMutate then elements (opts `omit` x) else pure x
-        xs' <- f xs
-        return (x' : xs')
+    f x = do
+        p <- choose (0, 1)
+        if p < pMutate then elements (genes `omit` x) else pure x
 
 -- | Given 2 parent Agents, returns a child Agent whose chromosome is
 -- produced via a simulation of genetic crossover and mutation.
@@ -153,10 +161,10 @@ crossover EvolutionParams {..} x y = do
         decoder   = agentDecoder x
         genes     = agentGenes x
         encoded   = encoder . agentGenome
-        part1     = flip take (encoded x)
-        part2     = flip drop (encoded y)
-        combineAt = combineWith (++) [part1, part2]
-    crosspoint <- chooseInt (1, length (encoded x) - 1)
+        part1     = flip B.take (encoded x)
+        part2     = flip B.drop (encoded y)
+        combineAt = combineWith (<>) [part1, part2]
+    crosspoint <- chooseInt64 (1, B.length (encoded x) - 1)
     mutated    <- mutate evolveMutateP genes (combineAt crosspoint)
     return $ newAgent encoder decoder genes (decoder mutated)
 

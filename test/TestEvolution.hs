@@ -1,8 +1,11 @@
 {-# LANGUAGE TemplateHaskell, RecordWildCards, ScopedTypeVariables #-}
 module TestEvolution where
 
+import qualified Data.ByteString.Lazy          as B
+import           Data.MonoTraversable           ( MonoFoldable(olength) )
 import qualified Data.Set                      as S
 import           Data.Typeable                  ( Typeable )
+import           Data.Word                      ( Word8 )
 import           Evolution                      ( Agent(..)
                                                 , EvolutionParams(..)
                                                 , evolve
@@ -49,13 +52,13 @@ instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Re
         f                           <- (arbitrary :: Gen (a -> Positive Float))
         return $ ReproduceArgs (params, map (getPositive . f), agents)
 
-newtype MutateArgs = MutateArgs (Double, [Char], String) deriving (Show, Eq)
+newtype MutateArgs = MutateArgs (Double, [Word8], B.ByteString) deriving (Show, Eq)
 
 instance Arbitrary MutateArgs where
     arbitrary = do
         p      <- choose (0, 1)
         genes  <- listOf1 arbitrary `suchThat` ((> 1) . length)
-        genome <- vectorOf 1000 (elements genes)
+        genome <- B.pack <$> vectorOf 1000 (elements genes)
         return $ MutateArgs (p, genes, genome)
 
 
@@ -102,8 +105,8 @@ prop_mutate (MutateArgs (p, genes, genome)) = do
     mutated <- mutate p genes genome
     let Estimate p' (ConfInt lower upper _) = binomialCI
             cl95
-            (length genome)
-            (length $ filter (uncurry (/=)) (zip genome mutated))
+            (olength genome)
+            (olength $ filter id (B.zipWith (/=) genome mutated))
     -- proportion of mutations == p with 95% confidence
     return $ cover 95 ((p > p' - lower) && (p < p' + upper)) "near p" True
 

@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, ScopedTypeVariables #-}
 module TestUtil where
 
+import           Data.ByteString.Builder        ( toLazyByteString )
 import           Data.List                      ( sort )
 import qualified Data.Set                      as S
 import           Test.Invariant                 ( inverts )
@@ -76,7 +77,7 @@ prop_matchupsLength (MatchupsArgs (n, xs)) =
 
 prop_bcdRoundtrip :: NonNegative Int -> NonNegative Int -> Bool
 prop_bcdRoundtrip (NonNegative n) =
-    (decodeBcd `inverts` encodeBcd n) . getNonNegative
+    ((decodeBcd . toLazyByteString) `inverts` encodeBcd n) . getNonNegative
 
 
 return []
