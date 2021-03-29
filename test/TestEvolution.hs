@@ -9,9 +9,9 @@ import           Data.Word                      ( Word8 )
 import           Evolution                      ( Agent(..)
                                                 , EvolutionParams(..)
                                                 , evolve
+                                                , genPopulation
                                                 , mergeAgents
                                                 , mutate
-                                                , newPopulation
                                                 , reproduce
                                                 )
 import           Instances                      ( )
@@ -46,7 +46,7 @@ newtype ReproduceArgs a = ReproduceArgs (EvolutionParams, [a] -> [Float], [Agent
 instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (ReproduceArgs a) where
     arbitrary = do
         params@EvolutionParams {..} <- arbitrary
-        agents                      <- newPop evolvePopSize =<< arbitrary
+        agents                      <- genPop evolvePopSize =<< arbitrary
         -- generate a fitness fn that strictly increases fitness
         -- fitness starts at 0 so this also guarantees fitness will be > 0
         -- necessary because fitnesses are passed as weights to `frequency`
@@ -64,9 +64,9 @@ instance Arbitrary MutateArgs where
         return $ MutateArgs (p, genes, genome)
 
 
-newPop :: (Arbitrary a) => Int -> Agent a -> Gen [Agent a]
-newPop n Agent {..} =
-    newPopulation n agentGenes agentEncoder agentDecoder arbitrary
+genPop :: (Arbitrary a) => Int -> Agent a -> Gen [Agent a]
+genPop n Agent {..} =
+    genPopulation n agentGenes agentEncoder agentDecoder arbitrary
 
 prop_mergeAgentsUnique :: [Agent a] -> Bool
 prop_mergeAgentsUnique = unique . mergeAgents
@@ -77,21 +77,20 @@ prop_mergeAgentsKeepAll xs = all (`elem` mergeAgents xs) xs
 prop_mergeAgentsNoNew :: [Agent a] -> Bool
 prop_mergeAgentsNoNew xs = all (`elem` xs) (mergeAgents xs)
 
-prop_newPopulationLength
-    :: Arbitrary a => NonNegative Int -> Agent a -> Gen Bool
-prop_newPopulationLength n agent = do
-    pop <- newPop (getNonNegative n) agent
+prop_populationLength :: Arbitrary a => NonNegative Int -> Agent a -> Gen Bool
+prop_populationLength n agent = do
+    pop <- genPop (getNonNegative n) agent
     return $ length pop == getNonNegative n
 
-prop_newPopulationIds :: Arbitrary a => NonNegative Int -> Agent a -> Gen Bool
-prop_newPopulationIds n agent = do
-    pop <- newPop (getNonNegative n) agent
+prop_populationIds :: Arbitrary a => NonNegative Int -> Agent a -> Gen Bool
+prop_populationIds n agent = do
+    pop <- genPop (getNonNegative n) agent
     return . and $ zipWith (==) (map agentId pop) (iterate (+ 1) 0)
 
-prop_newPopulationUniform
+prop_populationUniform
     :: (Eq a, Arbitrary a) => NonNegative Int -> Agent a -> a -> Gen Bool
-prop_newPopulationUniform n agent c = do
-    pop <- newPop (getNonNegative n) agent
+prop_populationUniform n agent c = do
+    pop <- genPop (getNonNegative n) agent
     return $ uniform pop True
   where
     uniform []       acc = acc

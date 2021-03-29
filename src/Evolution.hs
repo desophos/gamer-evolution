@@ -3,7 +3,7 @@
 module Evolution
     ( Agent(..)
     , EvolutionParams(..)
-    , newPopulation
+    , genPopulation
     , mutate
     , reproduce
     , evolve
@@ -134,14 +134,14 @@ newAgent agentEncoder agentDecoder agentGenes agentGenome = Agent { .. }
     agentFitness = 0
 
 -- | Returns a population of agents with incremental IDs.
-newPopulation
+genPopulation
     :: Int -- ^ Number of agents to generate.
     -> [Word8] -- ^ Possible genes that make up the encoded genome.
     -> (a -> B.ByteString) -- ^ Encodes an agent's genome.
     -> (B.ByteString -> a) -- ^ Decodes an agent's genome. Should invert the encoder.
     -> Gen a -- ^ Genome generator.
     -> Gen [Agent a]
-newPopulation n genes enc dec genome = do
+genPopulation n genes enc dec genome = do
     let agent = newAgent enc dec genes <$> genome
     agents <- vectorOf n agent
     return $ zipWith withId agents (iterate (+ 1) 0)

@@ -3,7 +3,7 @@
 module Gamer
     ( GamerParams(..)
     , PlayerState
-    , newPlayers
+    , genPlayers
     , playGame
     , dilemma
     ) where
@@ -19,7 +19,7 @@ import           Data.ByteString.Builder        ( Builder
                                                 )
 import qualified Data.ByteString.Lazy          as B
 import           Evolution                      ( Agent
-                                                , newPopulation
+                                                , genPopulation
                                                 )
 import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , Gen
@@ -176,11 +176,11 @@ genState params@GamerParams {..} = do
 genGenome :: GamerParams -> Gen [PlayerState]
 genGenome params@GamerParams {..} = vectorOf gamerStates (genState params)
 
-newPlayers
+genPlayers
     :: GamerParams
     -> Int -- ^ Number of agents to generate.
     -> Gen [Agent [PlayerState]]
-newPlayers params n = newPopulation
+genPlayers params n = genPopulation
     n
     (B.unpack . toLazyByteString . mconcat $ map intDec [0, 1])
     (encodeGenome params)

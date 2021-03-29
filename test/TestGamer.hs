@@ -23,7 +23,7 @@ import           GHC.IO.Handle                  ( hDuplicate
 import           Gamer                          ( GamerParams(..)
                                                 , PlayerState
                                                 , dilemma
-                                                , newPlayers
+                                                , genPlayers
                                                 , playGame
                                                 )
 import           Graphics.EasyPlot              ( Graph2D(Function2D)
@@ -68,7 +68,7 @@ prop_evolveFitness gParams eParams@EvolutionParams {..} = do
             . S.fromDistinctAscList
             , realToFrac . length
             ]
-    pop  <- newPlayers gParams { gamerActions = 2 } evolvePopSize
+    pop  <- genPlayers gParams { gamerActions = 2 } evolvePopSize
     pop' <- evolve eParams game (matchups 2 . S.fromDistinctAscList) pop
     let dFit = avgFit pop' - avgFit pop
     return
@@ -124,7 +124,7 @@ graphEvolveFitness = do
     genCollectEvolve
         :: GamerParams -> EvolutionParams -> Gen [[Agent [PlayerState]]]
     genCollectEvolve gParams eParams@EvolutionParams {..} = do
-        pop <- newPlayers gParams { gamerActions = 2 } evolvePopSize
+        pop <- genPlayers gParams { gamerActions = 2 } evolvePopSize
         collectEvolve eParams game (matchups 2 . S.fromDistinctAscList) pop
 
 
