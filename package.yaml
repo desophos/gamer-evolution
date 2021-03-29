@@ -21,14 +21,12 @@ description:         Please see the README on GitHub at <https://github.com/deso
 
 dependencies:
 - base >= 4.7 && < 5
-- QuickCheck >= 2.14 && < 2.15
+- QuickCheck >= 2.14 && < 3
 - mtl
 - containers
 - generic-random
 - test-invariant
-- regex-tdfa
 - vector
-- statistics >= 0.15.2 && < 0.16
 - digits >= 0.3 && < 1
 - bytestring
 - mono-traversable >= 1 && < 2
@@ -61,4 +59,6 @@ tests:
     ghc-options: *exe-ghc-options
     dependencies:
     - gamer-evolution
+    - regex-tdfa
+    - statistics >= 0.15 && < 1
     - easyplot
