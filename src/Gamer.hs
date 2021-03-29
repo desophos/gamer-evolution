@@ -64,6 +64,25 @@ data GameState = GameState
     }
     deriving (Ord, Eq, Show)
 
+{- $setup
+>>> :set -XRecordWildCards
+>>> :{
+let prop_encodedLen params@GamerParams {..} = do
+        tree <- randomStateTransitionTree params
+        let encoded = encodeTransitions params tree
+            bsLen   = fromIntegral . B.length . toLazyByteString
+        return $ 0 == bsLen encoded `rem` bcdLen gamerStates
+    prop_encodeUniformLen params = do
+        let encodedLen = B.length . encodeGenome params <$> randomGenome params
+        cs <- vectorOf 20 encodedLen
+        return $ all (head cs ==) cs
+    prop_treeUniform params@GamerParams {..} = do
+        let uniform (NextState _ ) = True
+            uniform (Reactions xs) = length xs == gamerActions && all uniform xs
+        tree <- randomStateTransitionTree params
+        return $ uniform tree
+:}
+-}
 
 -- | Reward matrix for the Prisoner's Dilemma.
 -- 0 = cooperate; 1 = defect
@@ -89,13 +108,6 @@ bcdLen =
         . encodeBcd 0
         . subtract 1
 
-
-prop_encodedLen :: GamerParams -> Gen Bool
-prop_encodedLen params@GamerParams {..} = do
-    tree <- randomStateTransitionTree params
-    let encoded = encodeTransitions params tree
-        bsLen   = fromIntegral . B.length . toLazyByteString
-    return $ 0 == bsLen encoded `rem` bcdLen gamerStates
 
 -- prop> \(params :: GamerParams) -> prop_encodedLen params
 -- +++ OK, passed 100 tests.
@@ -127,12 +139,6 @@ decodeState params@GamerParams {..} s = PlayerState { .. }  where
     stateAction           = decodeBcd action
     stateTransitions      = decodeTransitions params transitions
 
-prop_encodeUniformLen :: GamerParams -> Gen Bool
-prop_encodeUniformLen params = do
-    let encodedLen = B.length . encodeGenome params <$> randomGenome params
-    cs <- vectorOf 20 encodedLen
-    return $ all (head cs ==) cs
-
 -- prop> \(params :: GamerParams) -> prop_encodeUniformLen params
 -- +++ OK, passed 100 tests.
 encodeGenome :: GamerParams -> [PlayerState] -> B.ByteString
@@ -147,13 +153,6 @@ decodeGenome params@GamerParams {..} = map (decodeState params)
     stateBcdLen =
         bcdLen gamerActions + bcdLen gamerStates * gamerActions ^ gamerMemory
 
-
-prop_treeUniform :: GamerParams -> Gen Bool
-prop_treeUniform params@GamerParams {..} = do
-    let uniform (NextState _ ) = True
-        uniform (Reactions xs) = length xs == gamerActions && all uniform xs
-    tree <- randomStateTransitionTree params
-    return $ uniform tree
 
 -- prop> \(params :: GamerParams) -> prop_treeUniform params
 -- +++ OK, passed 100 tests.
