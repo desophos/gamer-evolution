@@ -47,6 +47,7 @@ instance Arbitrary EvolutionParams where
         evolveMutateP <- choose (0, 0.05) `suchThat` (> 0) -- avoid division by zero in analysis
         return EvolutionParams { .. }
 
+
 data Agent a = Agent
     { agentId      :: !Int
     , agentFitness :: !Float
@@ -97,6 +98,7 @@ mergeAgents :: [Agent a] -> [Agent a]
 mergeAgents = mergeAll f . sort
     where f x y = x { agentFitness = (agentFitness x + agentFitness y) / 2 }
 
+
 -- | Runs a fitness function on a population of agents.
 getFitness
     :: ([a] -> [Float]) -- ^ Fitness function.
@@ -114,6 +116,7 @@ newAgent agentEncoder agentDecoder agentGenes agentGenome = Agent { .. }
   where
     agentId      = 0
     agentFitness = 0
+
 
 -- | Returns a population of agents with incremental IDs.
 genPopulation
@@ -140,6 +143,7 @@ mutate pMutate genes = omapM f
         p <- choose (0, 1)
         if p < pMutate then elements (genes `omit` x) else pure x
 
+
 -- | Given 2 parent Agents, returns a child Agent whose chromosome is
 -- produced via a simulation of genetic crossover and mutation.
 crossover :: EvolutionParams -> Agent a -> Agent a -> Gen (Agent a)
@@ -154,6 +158,7 @@ crossover EvolutionParams {..} x y = do
     crosspoint <- chooseInt64 (1, B.length (encoded x) - 1)
     mutated    <- mutate evolveMutateP genes (combineAt crosspoint)
     return $ newAgent encoder decoder genes (decoder mutated)
+
 
 reproduce
     :: EvolutionParams
@@ -182,6 +187,7 @@ reproduce params@EvolutionParams {..} f matchup pop = do
         y <- pickFit $ survived `omit` x
         crossover params x y
 
+
 -- | Evolves a population over a number of generations. See 'reproduce'.
 evolve
     :: EvolutionParams
@@ -195,6 +201,7 @@ evolve params@EvolutionParams {..} f matchup pop = evolve'
   where
     reproduce' = reproduce params f matchup
     evolve' xs n = if n <= 0 then xs else evolve' (reproduce' =<< xs) (n - 1)
+
 
 collectEvolve
     :: EvolutionParams

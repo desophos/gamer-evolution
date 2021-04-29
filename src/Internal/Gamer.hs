@@ -37,9 +37,11 @@ instance Arbitrary GamerParams where
         gamerMemory  <- choose (3, 3)
         return GamerParams { .. }
 
+
 data TransitionTree a = NextState a | Reactions [TransitionTree a]
     deriving (Ord, Eq, Show)
 type StateTransitionTree = TransitionTree Int
+
 
 data PlayerState = PlayerState
     { stateAction      :: !Int
@@ -86,6 +88,7 @@ encodeTransitions GamerParams {..} (NextState i) =
 encodeTransitions params (Reactions ts) =
     mconcat $ map (encodeTransitions params) ts
 
+
 -- prop> \(params :: GamerParams) -> (decodeTransitions params) `inverts` (encodeTransitions params) <$> genStateTransitionTree params
 -- +++ OK, passed 100 tests.
 decodeTransitions :: GamerParams -> B.ByteString -> StateTransitionTree
@@ -95,10 +98,12 @@ decodeTransitions GamerParams {..} =
             else buildTree (map Reactions . chunk gamerActions $ xs)
     in  buildTree . map (NextState . decodeBcd) . chunk (bcdLen gamerStates)
 
+
 encodeState :: GamerParams -> PlayerState -> Builder
 encodeState params@GamerParams {..} PlayerState {..} =
     encodeBcd (bcdLen gamerActions) stateAction
         <> encodeTransitions params stateTransitions
+
 
 -- prop> \(params :: GamerParams) -> (decodeState params) `inverts` (encodeState params) <$> genState params
 -- +++ OK, passed 100 tests.
@@ -108,8 +113,10 @@ decodeState params@GamerParams {..} s = PlayerState { .. }  where
     stateAction           = decodeBcd action
     stateTransitions      = decodeTransitions params transitions
 
+
 encodeGenome :: GamerParams -> [PlayerState] -> B.ByteString
 encodeGenome params = toLazyByteString . mconcat . map (encodeState params)
+
 
 -- prop> \(params :: GamerParams) -> (decodeGenome params) `inverts` (encodeGenome params) <$> genGenome params
 -- +++ OK, passed 100 tests.
@@ -132,14 +139,17 @@ genStateTransitionTree GamerParams {..} = f (gamerMemory - 1)
             then NextState <$> choose (0, gamerStates - 1)
             else f (depth - 1)
 
+
 genState :: GamerParams -> Gen PlayerState
 genState params@GamerParams {..} = do
     stateAction      <- choose (0, gamerActions - 1)
     stateTransitions <- genStateTransitionTree params
     return PlayerState { .. }
 
+
 genGenome :: GamerParams -> Gen [PlayerState]
 genGenome params@GamerParams {..} = vectorOf gamerStates (genState params)
+
 
 genPlayers
     :: GamerParams

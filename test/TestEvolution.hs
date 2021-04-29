@@ -44,6 +44,7 @@ instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Re
         f                           <- (arbitrary :: Gen (a -> Positive Float))
         return $ ReproduceArgs (params, map (getPositive . f), agents)
 
+
 newtype MutateArgs = MutateArgs (Double, [Word8], B.ByteString) deriving (Show, Eq)
 
 instance Arbitrary MutateArgs where
@@ -59,28 +60,35 @@ matchup :: [Agent a] -> [[Agent a]]
 --matchup = matchWithBest 2 10 (Down . agentFitness) . S.fromDistinctAscList
 matchup = matchups 2 . S.fromDistinctAscList
 
+
 genPop :: (Arbitrary a) => Int -> Agent a -> Gen [Agent a]
 genPop n Agent {..} =
     genPopulation n agentGenes agentEncoder agentDecoder arbitrary
 
+
 prop_mergeAgentsUnique :: [Agent a] -> Bool
 prop_mergeAgentsUnique = unique . mergeAgents
+
 
 prop_mergeAgentsKeepAll :: [Agent a] -> Bool
 prop_mergeAgentsKeepAll xs = all (`elem` mergeAgents xs) xs
 
+
 prop_mergeAgentsNoNew :: [Agent a] -> Bool
 prop_mergeAgentsNoNew xs = all (`elem` xs) (mergeAgents xs)
+
 
 prop_populationLength :: Arbitrary a => NonNegative Int -> Agent a -> Gen Bool
 prop_populationLength n agent = do
     pop <- genPop (getNonNegative n) agent
     return $ length pop == getNonNegative n
 
+
 prop_populationIds :: Arbitrary a => NonNegative Int -> Agent a -> Gen Bool
 prop_populationIds n agent = do
     pop <- genPop (getNonNegative n) agent
     return . and $ zipWith (==) (map agentId pop) [0 ..]
+
 
 prop_populationUniform
     :: (Eq a, Arbitrary a) => NonNegative Int -> Agent a -> a -> Gen Bool
@@ -96,6 +104,7 @@ prop_populationUniform n agent c = do
         enc z = agentEncoder z c
         dec z = agentDecoder z $ enc z
 
+
 prop_mutate :: MutateArgs -> Gen Property
 prop_mutate (MutateArgs (p, genes, genome)) = do
     mutated <- mutate p genes genome
@@ -106,10 +115,12 @@ prop_mutate (MutateArgs (p, genes, genome)) = do
     -- proportion of mutations == p with 95% confidence
     return $ cover 95 ((p > p' - lower) && (p < p' + upper)) "near p" True
 
+
 prop_reproduceLength :: ReproduceArgs a -> Gen Bool
 prop_reproduceLength (ReproduceArgs (params, f, pop)) = do
     pop' <- reproduce params f matchup pop
     return $ length pop == length pop'
+
 
 prop_reproduceIds :: ReproduceArgs a -> Gen Bool
 prop_reproduceIds (ReproduceArgs (params, f, pop)) =
@@ -119,10 +130,12 @@ prop_reproduceIds (ReproduceArgs (params, f, pop)) =
     fIncreasing acc _ [_         ] = acc
     fIncreasing acc g (x : y : xs) = fIncreasing (acc && g x < g y) g (y : xs)
 
+
 prop_evolveId :: ReproduceArgs a -> NonPositive Int -> Gen Bool
 prop_evolveId (ReproduceArgs (params, f, pop)) n =
     (pop ==)
         <$> evolve params { evolveGenerations = getNonPositive n } f matchup pop
+
 
 prop_evolvePreserve :: ReproduceArgs a -> Gen Bool
 prop_evolvePreserve (ReproduceArgs (params, f, pop)) = do
