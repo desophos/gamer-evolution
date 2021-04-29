@@ -18,6 +18,7 @@ import           Data.List                      ( sort
                                                 , sortOn
                                                 )
 import           Data.MonoTraversable           ( MonoTraversable(omapM) )
+import           Data.Ord                       ( Down(Down) )
 import           Data.Word                      ( Word8 )
 import           GHC.Float.RealFracMethods      ( roundDoubleInt )
 import           GHC.Generics                   ( Generic )
@@ -184,7 +185,7 @@ reproduce params@EvolutionParams {..} f matchup pop = do
     survived =
         sortOn agentId
             . take evolveSurvivors
-            . sortOn agentFitness
+            . sortOn (Down . agentFitness)
             . getFitness f
             . matchup
             $ pop
