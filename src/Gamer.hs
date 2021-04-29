@@ -42,9 +42,9 @@ data GamerParams = GamerParams
 
 instance Arbitrary GamerParams where
     arbitrary = do
-        gamerActions <- choose (2, 8)
-        gamerStates  <- (2 ^) <$> choose (1, 6 :: Int)
-        gamerMemory  <- choose (1, 3)
+        gamerActions <- choose (2, 2)
+        gamerStates  <- (2 ^) <$> choose (1, 3 :: Int)
+        gamerMemory  <- choose (3, 3)
         return GamerParams { .. }
 
 data TransitionTree a = NextState a | Reactions [TransitionTree a]

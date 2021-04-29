@@ -50,14 +50,14 @@ data EvolutionParams = EvolutionParams
 
 instance Arbitrary EvolutionParams where
     arbitrary = do
-        evolveGenerations <- chooseInt (5, 10)
-        evolvePopSize     <- chooseInt (20, 60) `suchThat` even
+        evolveGenerations <- chooseInt (30, 50)
+        evolvePopSize     <- chooseInt (40, 60) `suchThat` even
         let both f (x, y) = (f x, f y)
             scalePopSize = roundDoubleInt . (* fromIntegral evolvePopSize)
-            surviveRange = both scalePopSize (0.3, 0.8)
-        evolveMutateP <- choose (0, 0.1) `suchThat` (> 0) -- avoid division by zero in analysis
+            surviveRange = both scalePopSize (0.4, 0.6)
         evolveSurvivors <- chooseInt surviveRange
             `suchThat` combineWith (&&) [(> 1), (< evolvePopSize)]
+        evolveMutateP <- choose (0, 0.05) `suchThat` (> 0) -- avoid division by zero in analysis
         return EvolutionParams { .. }
 
 data Agent a = Agent

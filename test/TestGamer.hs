@@ -64,7 +64,7 @@ matchup = matchups 2 . S.fromDistinctAscList
 
 prop_evolveFitness :: GamerParams -> EvolutionParams -> Gen Property
 prop_evolveFitness gParams eParams@EvolutionParams {..} = do
-    let game = playGame dilemma 2
+    let game   = playGame dilemma 100
         avgFit = combineWith
             (/)
             [ sum . map agentFitness . getFitness game . matchup
