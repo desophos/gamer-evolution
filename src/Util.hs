@@ -22,6 +22,8 @@ import qualified Data.Set                      as S
 import qualified Data.Vector                   as V
 import           GHC.List                       ( foldl1' )
 
+
+-- | A Chunkable is a MonoFoldable that can be split.
 class MonoFoldable a => Chunkable a where
     bottom :: a
     chunkAt :: Int -> a -> (a, a)
@@ -52,6 +54,8 @@ instance Chunkable B.ByteString where
     bottom  = B.empty
     chunkAt = B.splitAt . fromIntegral
 
+
+-- | Monomorphic filter interface like "Data.MonoTraversable".
 class MonoFilterable mono where
     ofilter :: (Element mono -> Bool) -> mono -> mono
 
@@ -60,6 +64,7 @@ instance MonoFilterable [a] where
 instance MonoFilterable B.ByteString where
     ofilter = B.filter
 
+
 omit
     :: (MonoFilterable mono, Eq (Element mono))
     => mono -- ^ Filterable to omit from.
@@ -67,8 +72,9 @@ omit
     -> mono -- ^ Filterable without the omitted element.
 omit xs x = ofilter (/= x) xs
 
+
 -- | Merges consecutive equal elements.
--- Recommended to sort first.
+-- Recommended to sort first to ensure all equal elements are merged.
 merge
     :: Eq a
     => (a -> a -> a) -- ^ Combining function.
@@ -81,10 +87,12 @@ merge f xs = mergeF xs []
     mergeF (x : y : ys) acc =
         if x == y then mergeF ys (f x y : acc) else mergeF (y : ys) (x : acc)
 
+
 -- | Continues merging until there's no more to merge.
 mergeAll :: Eq a => (a -> a -> a) -> [a] -> [a]
 mergeAll f xs = if merged == merge f merged then merged else mergeAll f merged
     where merged = merge f xs
+
 
 -- | True if the list contains no duplicates.
 unique :: Ord a => [a] -> Bool
@@ -94,27 +102,34 @@ unique xs = f (sort xs)
     f [_         ] = True
     f (x : y : ys) = x /= y && f (y : ys)
 
+
 -- | True if the lists share all elements in any order.
 -- Duplicate elements are combined.
 sameMatch :: Ord a => [a] -> [a] -> Bool
 sameMatch xs ys = S.fromList xs == S.fromList ys
 
--- | Returns `[]` if `n > length items`.
--- | Complexity of repeated calls with the same `n` and `k`: 
--- `O( n! / k!(n-k)! )` where `n = size items`
--- | Adapted from https://rosettacode.org/wiki/Combinations#Haskell.
 
--- >>> matchups 3 $ S.fromDistinctAscList ['a'..'e']
+-- | Returns @[]@ if @k > size items@.
+--
+-- Complexity of repeated calls with the same @n@ and @k@: 
+-- @O( n! / k!(n-k)! )@ where @n = size items@.
+--
+-- Adapted from https://rosettacode.org/wiki/Combinations#Haskell.
+--
+-- >>> import qualified Data.Set as Set
+-- >>> matchups 3 (Set.fromList ['a'..'e'])
 -- ["abc","abd","abe","acd","ace","ade","bcd","bce","bde","cde"]
 
--- Data.Vector.! is O(1), so converting `items` to Vector allows us 
--- to memoize the expensive work of finding combinations
--- by calculating the combination indexes once per (n, length itemsV) pair
--- and using those indexes to generate the combinations of items.
+{- 
+    Data.Vector.! is O(1), so converting @items@ to Vector allows us 
+    to memoize the expensive work of finding combinations
+    by calculating the combination indexes once per (k, length itemsV) pair
+    and using those indexes to generate the combinations of items.
+-}
 matchups
-    :: Int -- ^ Combination length (`1 < k <= size items`).
-    -> S.Set a -- ^ Set to find combinations in (`items`).
-    -> [[a]] -- ^ All unique length-n combinations in `items`.
+    :: Int -- ^ Combination length (@1 < k <= size items@).
+    -> S.Set a -- ^ Set to find combinations in (@items@).
+    -> [[a]] -- ^ All unique length-n combinations in @items@.
 matchups k items = if k < 0
     then error $ "Util.matchups k must be >= 0. k = " ++ show k
     else map (map (itemsV V.!)) combIndexes
@@ -124,6 +139,7 @@ matchups k items = if k < 0
         (memoize . memoize) (\x -> comb [0 .. x - 1]) (length itemsV) k
     comb _  0 = [[]]
     comb xs m = [ y : zs | y : ys <- tails xs, zs <- comb ys (m - 1) ]
+
 
 -- | Returns all @k@-length combinations between @items@ 
 -- and the first @nTake@ elements of @items@ sorted by @f@.
@@ -156,14 +172,19 @@ matchWithBest k nTake f items
         nTake
         k
 
+
+-- | Flipped (>>) for convenience.
 (<<) :: Monad m => m a -> m b -> m a
 (<<) = flip (>>)
+
 
 -- | https://bor0.wordpress.com/2020/12/11/haskell-memoization-and-evaluation-model/
 memoize :: (Int -> a) -> (Int -> a)
 memoize f = (map f [0 ..] !!)
 
+
 -- | Memoized over both parameters for better performance over many calls.
+--
 -- >>> import Data.ByteString.Builder (toLazyByteString)
 -- >>> toLazyByteString $ encodeBcd 4 7
 -- "0111"
@@ -179,9 +200,11 @@ encodeBcd = (memoize . memoize)
         in  bsify padding <> bsify encoded
     )
 
+
 -- | Given a string of binary digits, returns the number as a decimal Int.
 decodeBcd :: B.ByteString -> Int
 decodeBcd = unDigits 2 . map digitToInt . C.unpack
+
 
 -- | Apply a list of functions to the same input
 -- and combine their outputs.
@@ -189,11 +212,14 @@ combineWith :: (b -> b -> b) -> [a -> b] -> a -> b
 combineWith _       [] _ = error "Util.combineWith requires a list of functions"
 combineWith combine fs x = foldl1' combine $ map ($ x) fs
 
--- | A value x is grouped in the largest bin <= x.
--- | If a value is even lower than the first bin,
+
+-- | A value @x@ is grouped in the largest bin <= @x@.
+--
+-- If a value is even lower than the first bin,
 -- it's grouped in the first bin anyway.
--- >>> sortBins [0,10..50] [0,3..59]
--- fromList [(0,[0,3,6,9]),(10,[12,15,18]),(20,[21,24,27]),(30,[30,33,36,39]),(40,[42,45,48]),(50,[51,54,57])]
+--
+-- >>> sortBins [0,10..30] [0,3..39]
+-- fromList [(0,[0,3,6,9]),(10,[12,15,18]),(20,[21,24,27]),(30,[30,33,36,39])]
 sortBins
     :: Ord a
     => [a] -- ^ Bins to group values into.
