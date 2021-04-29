@@ -58,25 +58,6 @@ data GameState = GameState
     }
     deriving (Ord, Eq, Show)
 
-{- $setup
->>> :set -XRecordWildCards
->>> :{
-let prop_encodedLen params@GamerParams {..} = do
-        tree <- genStateTransitionTree params
-        let encoded = encodeTransitions params tree
-            bsLen   = fromIntegral . B.length . toLazyByteString
-        return $ 0 == bsLen encoded `rem` bcdLen gamerStates
-    prop_encodeUniformLen params = do
-        let encodedLen = B.length . encodeGenome params <$> genGenome params
-        cs <- vectorOf 20 encodedLen
-        return $ all (head cs ==) cs
-    prop_treeUniform params@GamerParams {..} = do
-        let uniform (NextState _ ) = True
-            uniform (Reactions xs) = length xs == gamerActions && all uniform xs
-        tree <- genStateTransitionTree params
-        return $ uniform tree
-:}
--}
 
 -- | Reward matrix for the Prisoner's Dilemma.
 -- 0 = cooperate; 1 = defect
@@ -103,8 +84,6 @@ bcdLen =
         . subtract 1
 
 
--- prop> \(params :: GamerParams) -> prop_encodedLen params
--- +++ OK, passed 100 tests.
 encodeTransitions :: GamerParams -> StateTransitionTree -> Builder
 encodeTransitions GamerParams {..} (NextState i) =
     encodeBcd (bcdLen gamerStates) i
@@ -133,8 +112,6 @@ decodeState params@GamerParams {..} s = PlayerState { .. }  where
     stateAction           = decodeBcd action
     stateTransitions      = decodeTransitions params transitions
 
--- prop> \(params :: GamerParams) -> prop_encodeUniformLen params
--- +++ OK, passed 100 tests.
 encodeGenome :: GamerParams -> [PlayerState] -> B.ByteString
 encodeGenome params = toLazyByteString . mconcat . map (encodeState params)
 
@@ -148,8 +125,6 @@ decodeGenome params@GamerParams {..} = map (decodeState params)
         bcdLen gamerActions + bcdLen gamerStates * gamerActions ^ gamerMemory
 
 
--- prop> \(params :: GamerParams) -> prop_treeUniform params
--- +++ OK, passed 100 tests.
 genStateTransitionTree :: GamerParams -> Gen StateTransitionTree
 genStateTransitionTree GamerParams {..} = f (gamerMemory - 1)
   where

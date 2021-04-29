@@ -1,6 +1,8 @@
 {-# LANGUAGE TemplateHaskell, RecordWildCards #-}
 module TestGamer where
 
+import           Data.ByteString.Builder        ( toLazyByteString )
+import qualified Data.ByteString.Lazy          as B
 import           Data.List                      ( foldl1'
                                                 , stripPrefix
                                                 )
@@ -51,6 +53,30 @@ import           Util                           ( combineWith
 matchup :: [Agent a] -> [[Agent a]]
 --matchup = matchWithBest 2 10 (Down . agentFitness) . S.fromDistinctAscList
 matchup = matchups 2 . S.fromDistinctAscList
+
+
+prop_encodedLen :: GamerParams -> Gen Bool
+prop_encodedLen params@GamerParams {..} = do
+    tree <- genStateTransitionTree params
+    let encoded = encodeTransitions params tree
+        bsLen   = fromIntegral . B.length . toLazyByteString
+    return $ 0 == bsLen encoded `rem` bcdLen gamerStates
+
+
+prop_encodeUniformLen :: GamerParams -> Gen Bool
+prop_encodeUniformLen params = do
+    let encodedLen = B.length . encodeGenome params <$> genGenome params
+    cs <- vectorOf 20 encodedLen
+    return $ all (head cs ==) cs
+
+
+prop_treeUniform :: GamerParams -> Gen Bool
+prop_treeUniform params@GamerParams {..} = do
+    let uniform (NextState _ ) = True
+        uniform (Reactions xs) = length xs == gamerActions && all uniform xs
+    tree <- genStateTransitionTree params
+    return $ uniform tree
+
 
 prop_evolveFitness :: GamerParams -> EvolutionParams -> Gen Property
 prop_evolveFitness gParams eParams@EvolutionParams {..} = do
