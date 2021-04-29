@@ -3,6 +3,7 @@ module TestEvolution where
 
 import qualified Data.ByteString.Lazy          as B
 import           Data.MonoTraversable           ( MonoFoldable(olength) )
+import           Data.Ord                       ( Down(Down) )
 import qualified Data.Set                      as S
 import           Data.Typeable                  ( Typeable )
 import           Data.Word                      ( Word8 )
@@ -36,6 +37,7 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , vectorOf
                                                 )
 import           Util                           ( combineWith
+                                                , matchWithBest
                                                 , matchups
                                                 , unique
                                                 )
@@ -63,6 +65,10 @@ instance Arbitrary MutateArgs where
         genome <- B.pack <$> vectorOf 1000 (elements genes)
         return $ MutateArgs (p, genes, genome)
 
+
+matchup :: [Agent a] -> [[Agent a]]
+--matchup = matchWithBest 2 10 (Down . agentFitness) . S.fromDistinctAscList
+matchup = matchups 2 . S.fromDistinctAscList
 
 genPop :: (Arbitrary a) => Int -> Agent a -> Gen [Agent a]
 genPop n Agent {..} =
@@ -113,13 +119,12 @@ prop_mutate (MutateArgs (p, genes, genome)) = do
 
 prop_reproduceLength :: ReproduceArgs a -> Gen Bool
 prop_reproduceLength (ReproduceArgs (params, f, pop)) = do
-    pop' <- reproduce params f (matchups 2 . S.fromDistinctAscList) pop
+    pop' <- reproduce params f matchup pop
     return $ length pop == length pop'
 
 prop_reproduceIds :: ReproduceArgs a -> Gen Bool
 prop_reproduceIds (ReproduceArgs (params, f, pop)) =
-    fIncreasing True agentId
-        <$> reproduce params f (matchups 2 . S.fromDistinctAscList) pop
+    fIncreasing True agentId <$> reproduce params f matchup pop
   where
     fIncreasing acc _ []           = acc
     fIncreasing acc _ [_         ] = acc
@@ -128,14 +133,11 @@ prop_reproduceIds (ReproduceArgs (params, f, pop)) =
 prop_evolveId :: ReproduceArgs a -> NonPositive Int -> Gen Bool
 prop_evolveId (ReproduceArgs (params, f, pop)) n =
     (pop ==)
-        <$> evolve params { evolveGenerations = getNonPositive n }
-                   f
-                   (matchups 2 . S.fromDistinctAscList)
-                   pop
+        <$> evolve params { evolveGenerations = getNonPositive n } f matchup pop
 
 prop_evolvePreserve :: ReproduceArgs a -> Gen Bool
 prop_evolvePreserve (ReproduceArgs (params, f, pop)) = do
-    pop' <- evolve params f (matchups 2 . S.fromDistinctAscList) pop
+    pop' <- evolve params f matchup pop
     let args' = ReproduceArgs (params, f, pop')
     len <- prop_reproduceLength args'
     ids <- prop_reproduceIds args'

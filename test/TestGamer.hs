@@ -6,6 +6,7 @@ import           Data.List                      ( foldl1'
                                                 )
 import qualified Data.Map.Strict               as Map
 import           Data.Maybe                     ( fromMaybe )
+import           Data.Ord                       ( Down(Down) )
 import qualified Data.Set                      as S
 import qualified Data.Vector                   as V
 import           Evolution                      ( Agent(..)
@@ -52,24 +53,25 @@ import           Test.QuickCheck                ( Gen
                                                 )
 import           Text.Regex.TDFA                ( (=~) )
 import           Util                           ( combineWith
+                                                , matchWithBest
                                                 , matchups
                                                 )
 
+
+matchup :: [Agent a] -> [[Agent a]]
+--matchup = matchWithBest 2 10 (Down . agentFitness) . S.fromDistinctAscList
+matchup = matchups 2 . S.fromDistinctAscList
 
 prop_evolveFitness :: GamerParams -> EvolutionParams -> Gen Property
 prop_evolveFitness gParams eParams@EvolutionParams {..} = do
     let game = playGame dilemma 2
         avgFit = combineWith
             (/)
-            [ sum
-            . map agentFitness
-            . getFitness game
-            . matchups 2
-            . S.fromDistinctAscList
+            [ sum . map agentFitness . getFitness game . matchup
             , realToFrac . length
             ]
     pop  <- genPlayers gParams { gamerActions = 2 } evolvePopSize
-    pop' <- evolve eParams game (matchups 2 . S.fromDistinctAscList) pop
+    pop' <- evolve eParams game matchup pop
     let dFit = avgFit pop' - avgFit pop
     return
         . counterexample ("dFit = " ++ show dFit)
@@ -125,7 +127,7 @@ graphEvolveFitness = do
         :: GamerParams -> EvolutionParams -> Gen [[Agent [PlayerState]]]
     genCollectEvolve gParams eParams@EvolutionParams {..} = do
         pop <- genPlayers gParams { gamerActions = 2 } evolvePopSize
-        collectEvolve eParams game (matchups 2 . S.fromDistinctAscList) pop
+        collectEvolve eParams game matchup pop
 
 
 return []
