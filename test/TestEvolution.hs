@@ -85,7 +85,7 @@ prop_populationLength n agent = do
 prop_populationIds :: Arbitrary a => NonNegative Int -> Agent a -> Gen Bool
 prop_populationIds n agent = do
     pop <- genPop (getNonNegative n) agent
-    return . and $ zipWith (==) (map agentId pop) (iterate (+ 1) 0)
+    return . and $ zipWith (==) (map agentId pop) [0 ..]
 
 prop_populationUniform
     :: (Eq a, Arbitrary a) => NonNegative Int -> Agent a -> a -> Gen Bool

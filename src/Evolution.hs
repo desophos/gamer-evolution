@@ -55,14 +55,9 @@ instance Arbitrary EvolutionParams where
         let both f (x, y) = (f x, f y)
             scalePopSize = roundDoubleInt . (* fromIntegral evolvePopSize)
             surviveRange = both scalePopSize (0.3, 0.8)
-        evolveSurvivors <- arbitrary `suchThat` combineWith
-            (&&)
-            [ (> 1)
-            , (< evolvePopSize)
-            , (> fst surviveRange)
-            , (< snd surviveRange)
-            ]
         evolveMutateP <- choose (0, 0.1) `suchThat` (> 0) -- avoid division by zero in analysis
+        evolveSurvivors <- chooseInt surviveRange
+            `suchThat` combineWith (&&) [(> 1), (< evolvePopSize)]
         return EvolutionParams { .. }
 
 data Agent a = Agent
@@ -144,7 +139,7 @@ genPopulation
 genPopulation n genes enc dec genome = do
     let agent = newAgent enc dec genes <$> genome
     agents <- vectorOf n agent
-    return $ zipWith withId agents (iterate (+ 1) 0)
+    return $ zipWith withId agents [0 ..]
 
 
 mutate

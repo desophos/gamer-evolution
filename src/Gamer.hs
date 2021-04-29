@@ -242,7 +242,7 @@ stepGame game n players = do
             unzip $ map step $ zip3 players (reverse gameHistories) gameStates
     put GameState { gameStates    = newStates
                   , gameHistories = zipWith (:) actions gameHistories
-                  , gameScores    = zipWith (+) gameScores $ game actions
+                  , gameScores    = zipWith (+) gameScores (game actions)
                   }
     stepGame game (n - 1) players
 
