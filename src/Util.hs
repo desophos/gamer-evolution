@@ -86,10 +86,12 @@ mergeAll f xs = if merged == merge f merged then merged else mergeAll f merged
     where merged = merge f xs
 
 -- | True if the list contains no duplicates.
-unique :: Eq a => [a] -> Bool
-unique []       = True
-unique [_     ] = True
-unique (x : xs) = x `notElem` xs && unique xs
+unique :: Ord a => [a] -> Bool
+unique xs = f (sort xs)
+  where
+    f []           = True
+    f [_         ] = True
+    f (x : y : ys) = x /= y && f (y : ys)
 
 -- | True if the lists share all elements in any order.
 -- Duplicate elements are combined.
