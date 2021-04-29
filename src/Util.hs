@@ -11,6 +11,7 @@ import           Data.Digits                    ( digits
                                                 , unDigits
                                                 )
 import           Data.List                      ( sort
+                                                , sortOn
                                                 , tails
                                                 )
 import qualified Data.Map.Strict               as Map
@@ -123,6 +124,37 @@ matchups k items = if k < 0
         (memoize . memoize) (\x -> comb [0 .. x - 1]) (length itemsV) k
     comb _  0 = [[]]
     comb xs m = [ y : zs | y : ys <- tails xs, zs <- comb ys (m - 1) ]
+
+-- | Returns all @k@-length combinations between @items@ 
+-- and the first @nTake@ elements of @items@ sorted by @f@.
+--
+-- >>> import qualified Data.Set as Set
+-- >>> import Data.Ord ( Down(Down) )
+-- >>> matchWithBest 3 2 Down (Set.fromList ['a'..'c'])
+-- ["ccc","ccb","cbc","cbb","bcc","bcb","bbc","bbb","acc","acb","abc","abb"]
+
+-- See 'matchups' for implementation details.
+matchWithBest
+    :: Ord b
+    => Int -- ^ Number of items per match (@k@).
+    -> Int -- ^ Number of elements to take from sorted @items@ (@nTake@).
+    -> (a -> b) -- ^ Key fn to sort @items@ by before taking @nTake@ elements (@f@).
+    -> S.Set a -- ^ Set to generate matches from (@items@).
+    -> [[a]]
+matchWithBest k nTake f items
+    | k < 1 =  error
+    $  "Util.matchWithBest match length must be >= 1. k = "
+    ++ show k
+    | otherwise = map (map (itemsV V.!)) matchIndexes
+  where
+    itemsV       = V.fromList . sortOn f . S.toAscList $ items
+    matchIndexes = (memoize . memoize . memoize)
+        (\i n k ->
+            sequence $ [0 .. i - 1] : replicate (k - 1) [0 .. min i n - 1]
+        )
+        (length itemsV)
+        nTake
+        k
 
 (<<) :: Monad m => m a -> m b -> m a
 (<<) = flip (>>)
