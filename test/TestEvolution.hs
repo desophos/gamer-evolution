@@ -7,15 +7,8 @@ import           Data.Ord                       ( Down(Down) )
 import qualified Data.Set                      as S
 import           Data.Typeable                  ( Typeable )
 import           Data.Word                      ( Word8 )
-import           Evolution                      ( Agent(..)
-                                                , EvolutionParams(..)
-                                                , evolve
-                                                , genPopulation
-                                                , mergeAgents
-                                                , mutate
-                                                , reproduce
-                                                )
 import           Instances                      ( )
+import           Internal.Evolution
 import           Statistics.ConfidenceInt       ( binomialCI )
 import           Statistics.Types               ( ConfInt(ConfInt)
                                                 , Estimate(Estimate)
@@ -36,11 +29,7 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , suchThat
                                                 , vectorOf
                                                 )
-import           Util                           ( combineWith
-                                                , matchWithBest
-                                                , matchups
-                                                , unique
-                                                )
+import           Util
 
 
 newtype ReproduceArgs a = ReproduceArgs (EvolutionParams, [a] -> [Float], [Agent a]) deriving (Show)

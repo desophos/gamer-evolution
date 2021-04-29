@@ -9,23 +9,11 @@ import           Data.Maybe                     ( fromMaybe )
 import           Data.Ord                       ( Down(Down) )
 import qualified Data.Set                      as S
 import qualified Data.Vector                   as V
-import           Evolution                      ( Agent(..)
-                                                , EvolutionParams(..)
-                                                , collectEvolve
-                                                , evolve
-                                                , getFitness
-                                                )
 import           GHC.Float                      ( float2Int
                                                 , int2Float
                                                 )
 import           GHC.IO.Handle                  ( hDuplicate
                                                 , hDuplicateTo
-                                                )
-import           Gamer                          ( GamerParams(..)
-                                                , PlayerState
-                                                , dilemma
-                                                , genPlayers
-                                                , playGame
                                                 )
 import           Graphics.EasyPlot              ( Graph2D(Function2D)
                                                 , Option(Title)
@@ -33,6 +21,8 @@ import           Graphics.EasyPlot              ( Graph2D(Function2D)
                                                 , Plot(plot)
                                                 , TerminalType(PNG)
                                                 )
+import           Internal.Evolution
+import           Internal.Gamer
 import           Statistics.Sample              ( correlation )
 import           System.IO                      ( IOMode(WriteMode)
                                                 , hClose
