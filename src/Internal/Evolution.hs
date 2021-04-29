@@ -203,6 +203,7 @@ evolve params@EvolutionParams {..} f matchup pop = evolve'
     evolve' xs n = if n <= 0 then xs else evolve' (reproduce' =<< xs) (n - 1)
 
 
+-- | Like 'evolve' but returns a list of all generations instead of just the last one.
 collectEvolve
     :: EvolutionParams
     -> ([a] -> [Float])
