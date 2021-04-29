@@ -28,7 +28,6 @@ import           Internal.Gamer
 import           Statistics.Sample              ( correlation )
 import           System.IO                      ( IOMode(WriteMode)
                                                 , hClose
-                                                , hPutStrLn
                                                 , openFile
                                                 , stdout
                                                 )
@@ -92,30 +91,57 @@ prop_evolveFitness gParams eParams@EvolutionParams {..} = do
         $ True -- we only care about the statistics
 
 
-analyzeEvolveFitness :: IO Bool
-analyzeEvolveFitness = do
-    let filename = "prop_evolveFitness.log"
-        regex    = "([a-zA-Z]+) = ([-0-9.]+)"
-
+-- | Redirects @stdout@ to a file temporarily to capture output of an IO action,
+-- then returns the file's contents.
+outputToFile
+    :: String -- ^ The name of the file to redirect output to.
+    -> IO () -- ^ The IO action to execute, which should output to @stdout@.
+    -> IO String
+outputToFile filename action = do
     stdout' <- hDuplicate stdout
     file    <- openFile filename WriteMode
     hDuplicateTo file stdout
-    verboseCheck $ withMaxSuccess 500 prop_evolveFitness
+    action
     hClose file
-    text <- readFile filename
+    hDuplicateTo stdout' stdout
+    readFile filename
 
-    let allMatches = text =~ regex :: [[String]]
-        allData    = Map.fromListWith
-            (V.++)
-            [ (stripGet $ match !! 1, V.singleton . read $ match !! 2)
-            | match <- allMatches
-            ]
-            where stripGet s = fromMaybe s (stripPrefix "get" s)
+
+-- | Parses parameter names and values from 'Test.QuickCheck.verboseCheck' output.
+--
+-- Returns a Map from each parameter's name to a Vector of its values,
+-- collected from all tests in order of execution.
+parseQuickCheck
+    :: Read a
+    => String -- ^ The output of 'Test.QuickCheck.verboseCheck'.
+    -> Map.Map String (V.Vector a)
+parseQuickCheck text = Map.fromListWith
+    (V.++)
+    [ (parseKey match, parseVal match) | match <- matches ]
+  where
+    regex   = "([a-zA-Z]+) = ([-0-9.]+)"
+    matches = text =~ regex :: [[String]]
+    stripGet s = fromMaybe s (stripPrefix "get" s)
+    parseKey match = stripGet $ match !! 1
+    parseVal match = V.singleton . read $ match !! 2
+
+
+analyzeEvolveFitness :: IO Bool
+analyzeEvolveFitness = do
+    let filename = "prop_evolveFitness.log"
+
+    text <-
+        outputToFile filename
+        . verboseCheck
+        . withMaxSuccess 300
+        $ prop_evolveFitness
+
+    let allData = parseQuickCheck text
         pairFit = Map.map $ V.zip (allData Map.! "dFit")
         rs      = Map.map correlation $ pairFit allData
 
     mapM_
-        (hPutStrLn stdout')
+        putStrLn
         ("correlations:" : [ k ++ " = " ++ show v | (k, v) <- Map.assocs rs ])
     return True
 
