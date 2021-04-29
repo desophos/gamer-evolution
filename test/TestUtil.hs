@@ -19,15 +19,7 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , resize
                                                 , suchThat
                                                 )
-import           Util                           ( chunk
-                                                , decodeBcd
-                                                , encodeBcd
-                                                , matchWithBest
-                                                , matchups
-                                                , mergeAll
-                                                , sameMatch
-                                                , unique
-                                                )
+import           Util
 
 
 newtype ChunkArgs a = ChunkArgs (Int, [a]) deriving (Eq, Show)

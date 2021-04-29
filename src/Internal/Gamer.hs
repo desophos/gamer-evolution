@@ -20,11 +20,7 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , choose
                                                 , vectorOf
                                                 )
-import           Util                           ( chunk
-                                                , decodeBcd
-                                                , encodeBcd
-                                                , memoize
-                                                )
+import           Util
 
 
 data GamerParams = GamerParams

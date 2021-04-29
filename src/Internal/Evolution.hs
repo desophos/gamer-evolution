@@ -24,11 +24,7 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , vectorOf
                                                 )
 import           Test.QuickCheck.Gen            ( chooseInt64 )
-import           Util                           ( combineWith
-                                                , mergeAll
-                                                , omit
-                                                , unique
-                                                )
+import           Util
 
 
 data EvolutionParams = EvolutionParams

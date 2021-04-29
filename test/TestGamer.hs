@@ -44,10 +44,7 @@ import           Test.QuickCheck                ( Gen
                                                 , withMaxSuccess
                                                 )
 import           Text.Regex.TDFA                ( (=~) )
-import           Util                           ( combineWith
-                                                , matchWithBest
-                                                , matchups
-                                                )
+import           Util
 
 
 matchup :: [Agent a] -> [[Agent a]]
