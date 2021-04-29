@@ -4,6 +4,7 @@ module TestUtil where
 import           Data.ByteString.Builder        ( toLazyByteString )
 import           Data.List                      ( sort )
 import qualified Data.Set                      as S
+import           Instances                      ( )
 import           Test.Invariant                 ( inverts )
 import           Test.QuickCheck                ( Arbitrary(arbitrary)
                                                 , CoArbitrary
@@ -21,6 +22,7 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
 import           Util                           ( chunk
                                                 , decodeBcd
                                                 , encodeBcd
+                                                , matchWithBest
                                                 , matchups
                                                 , mergeAll
                                                 , sameMatch
@@ -42,9 +44,18 @@ newtype MatchupsArgs a = MatchupsArgs (Int, S.Set a) deriving (Eq, Show)
 
 instance (Ord a, Arbitrary a) => Arbitrary (MatchupsArgs a) where
     arbitrary = do
-        xs <- resize 20 arbitrary `suchThat` ((> 1) . S.size)
-        n  <- chooseInt (2, 5) `suchThat` (<= S.size xs)
-        return $ MatchupsArgs (n, xs)
+        xs <- resize 50 arbitrary `suchThat` ((> 1) . S.size)
+        k  <- chooseInt (2, 4) `suchThat` (<= S.size xs)
+        return $ MatchupsArgs (k, xs)
+
+newtype MatchBestArgs a = MatchBestArgs (Int, Int, a -> Int, S.Set a) deriving (Show)
+
+instance (Ord a, Arbitrary a, CoArbitrary a) => Arbitrary (MatchBestArgs a) where
+    arbitrary = do
+        MatchupsArgs (k, xs) <- arbitrary :: Gen (MatchupsArgs a)
+        n                    <- chooseInt (1, S.size xs - 1)
+        f                    <- arbitrary
+        return $ MatchBestArgs (k, n, f, xs)
 
 
 prop_mergeAllNeighbors :: (Eq a, Arbitrary a, CoArbitrary a) => [a] -> Gen Bool
@@ -69,11 +80,19 @@ prop_sameMatchFlip :: Ord a => [a] -> [a] -> Bool
 prop_sameMatchFlip xs ys = sameMatch xs ys == sameMatch ys xs
 
 prop_matchupsUnique :: Ord a => MatchupsArgs a -> Bool
-prop_matchupsUnique (MatchupsArgs (n, xs)) = unique $ matchups n xs
+prop_matchupsUnique (MatchupsArgs (k, xs)) = unique $ matchups k xs
 
 prop_matchupsLength :: MatchupsArgs a -> Bool
-prop_matchupsLength (MatchupsArgs (n, xs)) =
-    all ((== n) . length) (matchups n xs)
+prop_matchupsLength (MatchupsArgs (k, xs)) =
+    all ((== k) . length) (matchups k xs)
+
+prop_matchBestUnique :: Ord a => MatchBestArgs a -> Bool
+prop_matchBestUnique (MatchBestArgs (k, n, f, xs)) =
+    unique $ matchWithBest k n f xs
+
+prop_matchBestLength :: MatchBestArgs a -> Bool
+prop_matchBestLength (MatchBestArgs (k, n, f, xs)) =
+    all ((== k) . length) (matchWithBest k n f xs)
 
 prop_bcdRoundtrip :: NonNegative Int -> NonNegative Int -> Bool
 prop_bcdRoundtrip (NonNegative n) =
