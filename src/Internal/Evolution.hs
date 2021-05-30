@@ -110,6 +110,11 @@ getFitness f = mergeAgents . concatMap applyScores
     applyScores xs = zipWith withFitness xs (getScores xs)
 
 
+-- | Returns the average fitness of a population.
+avgFitness :: [Agent a] -> Float
+avgFitness = combineWith (/) [sum . map agentFitness, realToFrac . length]
+
+
 newAgent
     :: (a -> B.ByteString) -> (B.ByteString -> a) -> [Word8] -> a -> Agent a
 newAgent agentEncoder agentDecoder agentGenes agentGenome = Agent { .. }
