@@ -51,6 +51,7 @@ executables:
     ghc-options: *exe-ghc-options
     dependencies:
     - gamer-evolution
+    - easyplot
 
 tests:
   gamer-evolution-test:
