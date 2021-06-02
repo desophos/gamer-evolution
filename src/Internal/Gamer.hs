@@ -49,6 +49,12 @@ data PlayerState = PlayerState
     }
     deriving (Ord, Eq, Show)
 
+data Player = Player
+    { playerDefault :: !Int -- ^ The state to default to before we have enough move history.
+    , playerStates  :: [PlayerState]
+    }
+    deriving (Ord, Eq, Show)
+
 data GameState = GameState
     { gameStates    :: ![PlayerState]
     , gameHistories :: ![[Int]]
@@ -114,18 +120,24 @@ decodeState params@GamerParams {..} s = PlayerState { .. }  where
     stateTransitions      = decodeTransitions params transitions
 
 
-encodeGenome :: GamerParams -> [PlayerState] -> B.ByteString
-encodeGenome params = toLazyByteString . mconcat . map (encodeState params)
+encodePlayer :: GamerParams -> Player -> B.ByteString
+encodePlayer params@GamerParams {..} Player {..} =
+    toLazyByteString $ encodedDefault <> encodedStates
+  where
+    encodedDefault = encodeBcd (bcdLen gamerStates) playerDefault
+    encodedStates  = mconcat $ map (encodeState params) playerStates
 
 
--- prop> \(params :: GamerParams) -> (decodeGenome params) `inverts` (encodeGenome params) <$> genGenome params
+-- prop> \(params :: GamerParams) -> (decodePlayer params) `inverts` (encodePlayer params) <$> genPlayer params
 -- +++ OK, passed 100 tests.
-decodeGenome :: GamerParams -> B.ByteString -> [PlayerState]
-decodeGenome params@GamerParams {..} = map (decodeState params)
-    . chunk stateBcdLen
+decodePlayer :: GamerParams -> B.ByteString -> Player
+decodePlayer params@GamerParams {..} encoded = Player { .. }
   where
     stateBcdLen =
         bcdLen gamerActions + bcdLen gamerStates * gamerActions ^ gamerMemory
+    (dfault, states) = B.splitAt (fromIntegral $ bcdLen gamerStates) encoded
+    playerDefault    = decodeBcd dfault
+    playerStates     = map (decodeState params) . chunk stateBcdLen $ states
 
 
 genStateTransitionTree :: GamerParams -> Gen StateTransitionTree
@@ -147,49 +159,52 @@ genState params@GamerParams {..} = do
     return PlayerState { .. }
 
 
-genGenome :: GamerParams -> Gen [PlayerState]
-genGenome params@GamerParams {..} = vectorOf gamerStates (genState params)
+genPlayer :: GamerParams -> Gen Player
+genPlayer params@GamerParams {..} = do
+    playerDefault <- choose (0, gamerStates - 1)
+    playerStates  <- vectorOf gamerStates (genState params)
+    return Player { .. }
 
 
 genPlayers
     :: GamerParams
     -> Int -- ^ Number of agents to generate.
-    -> Gen [Agent [PlayerState]]
+    -> Gen [Agent Player]
 genPlayers params n = genPopulation
     n
     (B.unpack . toLazyByteString . mconcat $ map intDec [0, 1])
-    (encodeGenome params)
-    (decodeGenome params)
-    (genGenome params)
+    (encodePlayer params)
+    (decodePlayer params)
+    (genPlayer params)
 
 
 -- | Returns the index of the next PlayerState.
 findTransition
-    :: StateTransitionTree -- ^ Tree identifying potential states to transition to.
+    :: Int -- ^ The action to take before memory is full (in initial rounds).
+    -> StateTransitionTree -- ^ Tree identifying potential states to transition to.
     -> [Int] -- ^ The opponent's previous actions (sorted from most to least recent).
     -> Int
-findTransition (NextState stateID) _ = stateID
--- if memory is not full (fewer game rounds than memory)
--- then default to leftmost branch (action 0)
--- TODO: this isn't a great solution and may skew the algorithm
-findTransition (Reactions transitions) [] =
-    findTransition (head transitions) []
-findTransition (Reactions transitions) (lastMove : restMoves) =
-    findTransition (transitions !! lastMove) restMoves
+findTransition dfault = f
+  where
+    f (NextState stateID) _  = stateID -- We found our next state.
+    f (Reactions _      ) [] = dfault -- Memory is not full, so use default state.
+    f (Reactions transitions) (lastMove : restMoves) =
+        f (transitions !! lastMove) restMoves
 
 
 nextState
-    :: [PlayerState] -- ^ The FSM player.
+    :: Player -- ^ The FSM player.
     -> PlayerState -- ^ The current state.
     -> [Int] -- ^ The opponent's previous actions.
     -> PlayerState
-nextState states PlayerState {..} opponentHistory =
-    states !! findTransition stateTransitions opponentHistory
+nextState Player {..} PlayerState {..} opponentHistory =
+    playerStates
+        !! findTransition playerDefault stateTransitions opponentHistory
 
 -- | In the State monad, the state is the player's state
 -- and the value is the player's action.
 stepPlayer
-    :: [PlayerState] -- ^ The FSM player.
+    :: Player -- ^ The FSM player.
     -> [Int] -- ^ The opponent's previous actions.
     -> State PlayerState Int
 stepPlayer genome opponentHistory = do
@@ -201,7 +216,7 @@ stepPlayer genome opponentHistory = do
 stepGame
     :: ([Int] -> [Float]) -- ^ The game being played.
     -> Int -- ^ Number of rounds to play.
-    -> [[PlayerState]] -- ^ List of FSM players.
+    -> [Player] -- ^ List of FSM players.
     -> State GameState [Float]
 stepGame _ 0 _ = do
     GameState {..} <- get
@@ -224,10 +239,10 @@ stepGame game n players = do
 playGame
     :: ([Int] -> [Float]) -- ^ The game being played. Must preserve list length.
     -> Int -- ^ Number of rounds to play.
-    -> [[PlayerState]] -- ^ List of FSM players.
+    -> [Player] -- ^ List of FSM players.
     -> [Float]
 playGame game n players =
-    let gameStates    = map head players
+    let gameStates    = [ playerStates p !! playerDefault p | p <- players ]
         actions       = map stateAction gameStates
         gameHistories = map (: []) actions
         gameScores    = game actions
