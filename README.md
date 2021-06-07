@@ -1,6 +1,6 @@
 # Overview
 
-gamer-evolution is a framework for evolving game-theoretic agents. The agents are represented by finite state automata and evolved with a genetic algorithm in which the fitness function is the game being played. It is designed to support any game, although it's currently limited to 2-player games. `app/Main.hs` includes an example usage: graphing a population's average fitness over generations of evolution.
+gamer-evolution is a framework for evolving game-theoretic agents. The agents are represented by finite state machines and evolved with a genetic algorithm in which the fitness function is the game being played. It is designed to support any game, although it's currently limited to 2-player games. `app/Main.hs` includes an example usage: graphing a population's average fitness over generations of evolution.
 
 # Background
 
