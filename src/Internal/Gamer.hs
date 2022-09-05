@@ -70,6 +70,7 @@ dilemma [0, 0] = [3, 3]
 dilemma [1, 0] = [5, 0]
 dilemma [0, 1] = [0, 5]
 dilemma [1, 1] = [1, 1]
+dilemma x      = error $ "Invalid moves: " ++ show x
 
 
 -- | Returns the number of binary digits required to represent
