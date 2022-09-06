@@ -44,6 +44,14 @@ instance Arbitrary ReproduceArgs where
         f <- (arbitrary :: Gen ([Word8] -> Positive Float))
         return $ ReproduceArgs (params, map (getPositive . f), agents)
 
+newtype CrossoverArgs = CrossoverArgs (EvolutionParams, Agent [Word8], Agent [Word8]) deriving (Show)
+
+instance Arbitrary CrossoverArgs where
+    arbitrary = do
+        params <- arbitrary
+        agent1 <- arbitrary
+        agent2 <- genAgentLike agent1
+        return $ CrossoverArgs (params, agent1, agent2)
 
 newtype MutateArgs = MutateArgs (Double, [Word8], B.ByteString) deriving (Show, Eq)
 
