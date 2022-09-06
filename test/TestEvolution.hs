@@ -120,8 +120,8 @@ prop_mutate (MutateArgs (p, genes, genome)) = do
             cl95
             (olength genome)
             (olength $ filter id (B.zipWith (/=) genome mutated))
-    -- proportion of mutations == p with 95% confidence
-    return $ cover 95 ((p > p' - lower) && (p < p' + upper)) "near p" True
+    -- 90% of the time, proportion of mutations == p with 95% confidence
+    return $ cover 90 ((p > p' - lower) && (p < p' + upper)) "near p" True
 
 
 prop_reproduceLength :: ReproduceArgs -> Gen Bool
