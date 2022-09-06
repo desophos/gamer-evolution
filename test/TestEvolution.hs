@@ -32,16 +32,16 @@ import           Test.QuickCheck                ( Arbitrary(arbitrary)
 import           Util
 
 
-newtype ReproduceArgs a = ReproduceArgs (EvolutionParams, [a] -> [Float], [Agent a]) deriving (Show)
+newtype ReproduceArgs = ReproduceArgs (EvolutionParams, [[Word8]] -> [Float], [Agent [Word8]]) deriving (Show)
 
-instance (Show a, Typeable a, Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (ReproduceArgs a) where
+instance Arbitrary ReproduceArgs where
     arbitrary = do
         params@EvolutionParams {..} <- arbitrary
-        agents                      <- genPop evolvePopSize =<< arbitrary
+        agents <- genPop evolvePopSize =<< arbitrary
         -- generate a fitness fn that strictly increases fitness
         -- fitness starts at 0 so this also guarantees fitness will be > 0
         -- necessary because fitnesses are passed as weights to `frequency`
-        f                           <- (arbitrary :: Gen (a -> Positive Float))
+        f <- (arbitrary :: Gen ([Word8] -> Positive Float))
         return $ ReproduceArgs (params, map (getPositive . f), agents)
 
 
@@ -61,37 +61,37 @@ matchup :: [Agent a] -> [[Agent a]]
 matchup = matchups 2 . S.fromDistinctAscList
 
 
-genPop :: (Arbitrary a) => Int -> Agent a -> Gen [Agent a]
+genPop :: Int -> Agent [Word8] -> Gen [Agent [Word8]]
 genPop n Agent {..} =
     genPopulation n agentGenes agentEncoder agentDecoder arbitrary
 
 
-prop_mergeAgentsUnique :: [Agent a] -> Bool
+prop_mergeAgentsUnique :: [Agent [Word8]] -> Bool
 prop_mergeAgentsUnique = unique . mergeAgents
 
 
-prop_mergeAgentsKeepAll :: [Agent a] -> Bool
+prop_mergeAgentsKeepAll :: [Agent [Word8]] -> Bool
 prop_mergeAgentsKeepAll xs = all (`elem` mergeAgents xs) xs
 
 
-prop_mergeAgentsNoNew :: [Agent a] -> Bool
+prop_mergeAgentsNoNew :: [Agent [Word8]] -> Bool
 prop_mergeAgentsNoNew xs = all (`elem` xs) (mergeAgents xs)
 
 
-prop_populationLength :: Arbitrary a => NonNegative Int -> Agent a -> Gen Bool
+prop_populationLength :: NonNegative Int -> Agent [Word8] -> Gen Bool
 prop_populationLength n agent = do
     pop <- genPop (getNonNegative n) agent
     return $ length pop == getNonNegative n
 
 
-prop_populationIds :: Arbitrary a => NonNegative Int -> Agent a -> Gen Bool
+prop_populationIds :: NonNegative Int -> Agent [Word8] -> Gen Bool
 prop_populationIds n agent = do
     pop <- genPop (getNonNegative n) agent
     return . and $ zipWith (==) (map agentId pop) [0 ..]
 
 
 prop_populationUniform
-    :: (Eq a, Arbitrary a) => NonNegative Int -> Agent a -> a -> Gen Bool
+    :: NonNegative Int -> Agent [Word8] -> [Word8] -> Gen Bool
 prop_populationUniform n agent c = do
     pop <- genPop (getNonNegative n) agent
     return $ uniform pop True
@@ -116,13 +116,13 @@ prop_mutate (MutateArgs (p, genes, genome)) = do
     return $ cover 95 ((p > p' - lower) && (p < p' + upper)) "near p" True
 
 
-prop_reproduceLength :: ReproduceArgs a -> Gen Bool
+prop_reproduceLength :: ReproduceArgs -> Gen Bool
 prop_reproduceLength (ReproduceArgs (params, f, pop)) = do
     pop' <- reproduce params f matchup pop
     return $ length pop == length pop'
 
 
-prop_reproduceIds :: ReproduceArgs a -> Gen Bool
+prop_reproduceIds :: ReproduceArgs -> Gen Bool
 prop_reproduceIds (ReproduceArgs (params, f, pop)) =
     fIncreasing True agentId <$> reproduce params f matchup pop
   where
@@ -131,13 +131,13 @@ prop_reproduceIds (ReproduceArgs (params, f, pop)) =
     fIncreasing acc g (x : y : xs) = fIncreasing (acc && g x < g y) g (y : xs)
 
 
-prop_evolveId :: ReproduceArgs a -> NonPositive Int -> Gen Bool
+prop_evolveId :: ReproduceArgs -> NonPositive Int -> Gen Bool
 prop_evolveId (ReproduceArgs (params, f, pop)) n =
     (pop ==)
         <$> evolve params { evolveGenerations = getNonPositive n } f matchup pop
 
 
-prop_evolvePreserve :: ReproduceArgs a -> Gen Bool
+prop_evolvePreserve :: ReproduceArgs -> Gen Bool
 prop_evolvePreserve (ReproduceArgs (params, f, pop)) = do
     pop' <- evolve params f matchup pop
     let args' = ReproduceArgs (params, f, pop')

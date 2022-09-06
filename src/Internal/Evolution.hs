@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards, DeriveGeneric, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Internal.Evolution where
 
@@ -12,9 +13,7 @@ import           Data.Ord                       ( Down(Down) )
 import           Data.Word                      ( Word8 )
 import           GHC.Float.RealFracMethods      ( roundDoubleInt )
 import           GHC.Generics                   ( Generic )
-import           Test.Invariant                 ( inverts )
 import           Test.QuickCheck                ( Arbitrary(arbitrary)
-                                                , CoArbitrary
                                                 , Gen
                                                 , choose
                                                 , chooseInt
@@ -62,26 +61,19 @@ instance Eq (Agent a) where
     x == y = agentId x == agentId y
 instance Ord (Agent a) where
     x <= y = agentId x <= agentId y
-instance (Eq a, Arbitrary a, CoArbitrary a) => Arbitrary (Agent a) where
+instance Arbitrary (Agent [Word8]) where
+    -- ByteString has no Arbitrary instance so use [Word8] instead.
+    -- Restricting the genome to [Word8] provides enough complexity for evolution
+    -- and lets us use a trivial encoder/decoder instead of generating functions.
     arbitrary = do
-        let flip3 f x y z = f z y x
-            agentId      = 0
+        let agentId      = 0
             agentFitness = 0
-        agentGenome <- arbitrary
-        agentGenes  <- arbitrary
+            agentEncoder = B.pack
+            agentDecoder = B.unpack
+        agentGenes <- arbitrary
             `suchThat` combineWith (&&) [unique, (> 1) . length]
-        -- ByteString has no Arbitrary instance 
-        -- so generate functions over [Word8] instead
-        agentEncoder <-
-            (B.pack .)
-            <$>        arbitrary
-            `suchThat` (\f -> B.all (`elem` agentGenes)
-                                    (B.pack . f $ agentGenome)
-                       )
-        agentDecoder <-
-            (. B.unpack)
-            <$>        arbitrary
-            `suchThat` (\f -> inverts (f . B.unpack) agentEncoder agentGenome)
+        numGenes    <- chooseInt (2, 30)
+        agentGenome <- vectorOf numGenes (elements agentGenes)
         return Agent { .. }
 
 
