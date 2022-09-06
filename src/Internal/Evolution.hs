@@ -77,6 +77,12 @@ instance Arbitrary (Agent [Word8]) where
         return Agent { .. }
 
 
+genAgentLike :: Agent [Word8] -> Gen (Agent [Word8])
+genAgentLike agent@Agent {..} = do
+    agentGenome' <- vectorOf (length agentGenome) (elements agentGenes)
+    return agent { agentId = agentId + 1, agentGenome = agentGenome' }
+
+
 -- trivial helper functions
 withId :: Agent a -> Int -> Agent a
 withId x i = x { agentId = i }
