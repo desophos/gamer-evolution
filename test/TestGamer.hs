@@ -61,7 +61,7 @@ prop_encodedLen params@GamerParams {..} = do
 
 prop_encodedPlayersHaveSameLength :: GamerParams -> Gen Bool
 prop_encodedPlayersHaveSameLength params = do
-    let encodedLen = B.length . encodeGenome params <$> genGenome params
+    let encodedLen = B.length . encodePlayer params <$> genPlayer params
     cs <- vectorOf 20 encodedLen
     return $ all (head cs ==) cs
 
