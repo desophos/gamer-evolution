@@ -202,11 +202,11 @@ evolve
     -> [Agent a]
     -> Gen [Agent a]
 evolve params@EvolutionParams {..} f matchup pop = evolve'
-    (pure pop)
     evolveGenerations
+    (pure pop)
   where
     reproduce' = reproduce params f matchup
-    evolve' xs n = if n <= 0 then xs else evolve' (reproduce' =<< xs) (n - 1)
+    evolve' n xs = if n <= 0 then xs else evolve' (n - 1) . reproduce' =<< xs
 
 
 -- | Like 'evolve' but returns a list of all generations instead of just the last one.
