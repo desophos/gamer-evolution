@@ -74,33 +74,33 @@ genPop n Agent {..} =
     genPopulation n agentGenes agentEncoder agentDecoder arbitrary
 
 
-prop_mergeAgentsUnique :: [Agent [Word8]] -> Bool
-prop_mergeAgentsUnique = unique . mergeAgents
+prop_mergeAgentsRemovesDuplicates :: [Agent [Word8]] -> Bool
+prop_mergeAgentsRemovesDuplicates = unique . mergeAgents
 
 
-prop_mergeAgentsKeepAll :: [Agent [Word8]] -> Bool
-prop_mergeAgentsKeepAll xs = all (`elem` mergeAgents xs) xs
+prop_mergeAgentsDoesntMissAny :: [Agent [Word8]] -> Bool
+prop_mergeAgentsDoesntMissAny xs = all (`elem` mergeAgents xs) xs
 
 
-prop_mergeAgentsNoNew :: [Agent [Word8]] -> Bool
-prop_mergeAgentsNoNew xs = all (`elem` xs) (mergeAgents xs)
+prop_mergeAgentsDoesntCreateAny :: [Agent [Word8]] -> Bool
+prop_mergeAgentsDoesntCreateAny xs = all (`elem` xs) (mergeAgents xs)
 
 
-prop_populationLength :: NonNegative Int -> Agent [Word8] -> Gen Bool
-prop_populationLength n agent = do
+prop_populationIsCorrectSize :: NonNegative Int -> Agent [Word8] -> Gen Bool
+prop_populationIsCorrectSize n agent = do
     pop <- genPop (getNonNegative n) agent
     return $ length pop == getNonNegative n
 
 
-prop_populationIds :: NonNegative Int -> Agent [Word8] -> Gen Bool
-prop_populationIds n agent = do
+prop_populationHasCorrectIds :: NonNegative Int -> Agent [Word8] -> Gen Bool
+prop_populationHasCorrectIds n agent = do
     pop <- genPop (getNonNegative n) agent
     return . and $ zipWith (==) (map agentId pop) [0 ..]
 
 
-prop_populationUniform
+prop_populationHasSameEncoderDecoderGenes
     :: NonNegative Int -> Agent [Word8] -> [Word8] -> Gen Bool
-prop_populationUniform n agent c = do
+prop_populationHasSameEncoderDecoderGenes n agent c = do
     pop <- genPop (getNonNegative n) agent
     return $ uniform pop True
   where
@@ -113,8 +113,8 @@ prop_populationUniform n agent c = do
         dec z = agentDecoder z $ enc z
 
 
-prop_mutate :: MutateArgs -> Gen Property
-prop_mutate (MutateArgs (p, genes, genome)) = do
+prop_mutateProducesCorrectProportion :: MutateArgs -> Gen Property
+prop_mutateProducesCorrectProportion (MutateArgs (p, genes, genome)) = do
     mutated <- mutate p genes genome
     let Estimate p' (ConfInt lower upper _) = binomialCI
             cl95
@@ -147,14 +147,16 @@ prop_crossoverIsHalfAndHalf (CrossoverArgs (params, a1, a2)) = do
         == B.last (encodeGenome a2)
 
 
-prop_reproduceLength :: ReproduceArgs -> Gen Bool
-prop_reproduceLength (ReproduceArgs (params, f, pop)) = do
+-- | Reproduction should preserve population size.
+prop_reproducePreservesPopSize :: ReproduceArgs -> Gen Bool
+prop_reproducePreservesPopSize (ReproduceArgs (params, f, pop)) = do
     pop' <- reproduce params f matchup pop
     return $ length pop == length pop'
 
 
-prop_reproduceIds :: ReproduceArgs -> Gen Bool
-prop_reproduceIds (ReproduceArgs (params, f, pop)) =
+-- | Population IDs should stay in increasing order after reproduction.
+prop_reproducePreservesPopIds :: ReproduceArgs -> Gen Bool
+prop_reproducePreservesPopIds (ReproduceArgs (params, f, pop)) =
     fIncreasing True agentId <$> reproduce params f matchup pop
   where
     fIncreasing acc _ []           = acc
@@ -162,18 +164,21 @@ prop_reproduceIds (ReproduceArgs (params, f, pop)) =
     fIncreasing acc g (x : y : xs) = fIncreasing (acc && g x < g y) g (y : xs)
 
 
-prop_evolveId :: ReproduceArgs -> NonPositive Int -> Gen Bool
-prop_evolveId (ReproduceArgs (params, f, pop)) n = do
+-- | A non-positive number of generations should return the population unchanged.
+prop_evolveInvalidGenerationsIsNoOp
+    :: ReproduceArgs -> NonPositive Int -> Gen Bool
+prop_evolveInvalidGenerationsIsNoOp (ReproduceArgs (params, f, pop)) n = do
     pop' <- evolve params { evolveGenerations = getNonPositive n } f matchup pop
     return $ pop == pop'
 
 
-prop_evolvePreserve :: ReproduceArgs -> Gen Bool
-prop_evolvePreserve (ReproduceArgs (params, f, pop)) = do
+-- | Population size and ID sorting should be preserved with evolution.
+prop_evolvePreservesPop :: ReproduceArgs -> Gen Bool
+prop_evolvePreservesPop (ReproduceArgs (params, f, pop)) = do
     pop' <- evolve params f matchup pop
     let args' = ReproduceArgs (params, f, pop')
-    len <- prop_reproduceLength args'
-    ids <- prop_reproduceIds args'
+    len <- prop_reproducePreservesPopSize args'
+    ids <- prop_reproducePreservesPopIds args'
     return $ len && ids
 
 

@@ -59,23 +59,23 @@ prop_encodedLen params@GamerParams {..} = do
     return $ 0 == bsLen encoded `rem` bcdLen gamerStates
 
 
-prop_encodeUniformLen :: GamerParams -> Gen Bool
-prop_encodeUniformLen params = do
+prop_encodedPlayersHaveSameLength :: GamerParams -> Gen Bool
+prop_encodedPlayersHaveSameLength params = do
     let encodedLen = B.length . encodeGenome params <$> genGenome params
     cs <- vectorOf 20 encodedLen
     return $ all (head cs ==) cs
 
 
-prop_treeUniform :: GamerParams -> Gen Bool
-prop_treeUniform params@GamerParams {..} = do
+prop_stateTransitionTreeIsUniform :: GamerParams -> Gen Bool
+prop_stateTransitionTreeIsUniform params@GamerParams {..} = do
     let uniform (NextState _ ) = True
         uniform (Reactions xs) = length xs == gamerActions && all uniform xs
     tree <- genStateTransitionTree params
     return $ uniform tree
 
 
-prop_evolveFitness :: GamerParams -> EvolutionParams -> Gen Property
-prop_evolveFitness gParams eParams@EvolutionParams {..} = do
+prop_evolveFitnessIncreases :: GamerParams -> EvolutionParams -> Gen Property
+prop_evolveFitnessIncreases gParams eParams@EvolutionParams {..} = do
     let game   = playGame dilemma 100
         avgFit = combineWith
             (/)
@@ -134,7 +134,7 @@ analyzeEvolveFitness = do
         outputToFile filename
         . verboseCheck
         . withMaxSuccess 300
-        $ prop_evolveFitness
+        $ prop_evolveFitnessIncreases
 
     let allData = parseQuickCheck text
         pairFit = Map.map $ V.zip (allData Map.! "dFit")
