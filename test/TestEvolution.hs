@@ -123,6 +123,29 @@ prop_mutate (MutateArgs (p, genes, genome)) = do
     -- 90% of the time, proportion of mutations == p with 95% confidence
     return $ cover 90 ((p > p' - lower) && (p < p' + upper)) "near p" True
 
+-- | Crossover should preserve genome length.
+prop_crossoverPreservesLength :: CrossoverArgs -> Gen Bool
+prop_crossoverPreservesLength (CrossoverArgs (params, a1, a2)) = do
+    a' <- crossover params a1 a2
+    let genomeLengthA' = genomeLength a'
+    return
+        $  genomeLengthA'
+        == genomeLength a1
+        && genomeLengthA'
+        == genomeLength a2
+    where genomeLength = B.length . encodeGenome
+
+-- | Crossover should produce a genome that starts with the first gene from the first parent and ends with the last gene from the second parent.
+prop_crossoverIsHalfAndHalf :: CrossoverArgs -> Gen Bool
+prop_crossoverIsHalfAndHalf (CrossoverArgs (params, a1, a2)) = do
+    a' <- crossover params a1 a2
+    let genome' = encodeGenome a'
+    return
+        $  B.head genome'
+        == B.head (encodeGenome a1)
+        && B.last genome'
+        == B.last (encodeGenome a2)
+
 
 prop_reproduceLength :: ReproduceArgs -> Gen Bool
 prop_reproduceLength (ReproduceArgs (params, f, pop)) = do
