@@ -106,7 +106,7 @@ prop_populationUniform n agent c = do
   where
     uniform []       acc = acc
     uniform (x : xs) acc = uniform xs (acc && all (agentCommon x) xs)
-    agentCommon x y = fEq enc && fEq dec
+    agentCommon x y = fEq enc && fEq dec && fEq agentGenes
       where
         fEq f = f x == f y
         enc z = agentEncoder z c
