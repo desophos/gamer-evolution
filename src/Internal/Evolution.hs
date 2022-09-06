@@ -90,6 +90,9 @@ withId x i = x { agentId = i }
 withFitness :: Agent a -> Float -> Agent a
 withFitness x i = x { agentFitness = i }
 
+encodeGenome :: Agent a -> B.ByteString
+encodeGenome Agent {..} = agentEncoder agentGenome
+
 
 -- | Merges agents by ID, averaging fitness.
 mergeAgents :: [Agent a] -> [Agent a]
