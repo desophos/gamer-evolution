@@ -43,6 +43,7 @@ _exe-ghc-options: &exe-ghc-options
   - -Wincomplete-record-updates
   - -Wincomplete-uni-patterns
   - -Wredundant-constraints
+  - -Wno-type-defaults
 
 executables:
   gamer-evolution-exe:
