@@ -111,7 +111,7 @@ sameMatch xs ys = S.fromList xs == S.fromList ys
 
 -- | Returns @[]@ if @k > size items@.
 --
--- Complexity of repeated calls with the same @n@ and @k@: 
+-- Complexity of repeated calls with the same @n@ and @k@:
 -- @O( n! / k!(n-k)! )@ where @n = size items@.
 --
 -- Adapted from https://rosettacode.org/wiki/Combinations#Haskell.
@@ -120,8 +120,8 @@ sameMatch xs ys = S.fromList xs == S.fromList ys
 -- >>> matchups 3 (Set.fromList ['a'..'e'])
 -- ["abc","abd","abe","acd","ace","ade","bcd","bce","bde","cde"]
 
-{- 
-    Data.Vector.! is O(1), so converting @items@ to Vector allows us 
+{-
+    Data.Vector.! is O(1), so converting @items@ to Vector allows us
     to memoize the expensive work of finding combinations
     by calculating the combination indexes once per (k, length itemsV) pair
     and using those indexes to generate the combinations of items.
@@ -141,7 +141,7 @@ matchups k items = if k < 0
     comb xs m = [ y : zs | y : ys <- tails xs, zs <- comb ys (m - 1) ]
 
 
--- | Returns all @k@-length combinations between @items@ 
+-- | Returns all @k@-length combinations between @items@
 -- and the first @nTake@ elements of @items@ sorted by @f@.
 --
 -- >>> import qualified Data.Set as Set
@@ -165,8 +165,8 @@ matchWithBest k nTake f items
   where
     itemsV       = V.fromList . sortOn f . S.toAscList $ items
     matchIndexes = (memoize . memoize . memoize)
-        (\i n k ->
-            sequence $ [0 .. i - 1] : replicate (k - 1) [0 .. min i n - 1]
+        (\i n k' ->
+            sequence $ [0 .. i - 1] : replicate (k' - 1) [0 .. min i n - 1]
         )
         (length itemsV)
         nTake
