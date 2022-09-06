@@ -163,9 +163,9 @@ prop_reproduceIds (ReproduceArgs (params, f, pop)) =
 
 
 prop_evolveId :: ReproduceArgs -> NonPositive Int -> Gen Bool
-prop_evolveId (ReproduceArgs (params, f, pop)) n =
-    (pop ==)
-        <$> evolve params { evolveGenerations = getNonPositive n } f matchup pop
+prop_evolveId (ReproduceArgs (params, f, pop)) n = do
+    pop' <- evolve params { evolveGenerations = getNonPositive n } f matchup pop
+    return $ pop == pop'
 
 
 prop_evolvePreserve :: ReproduceArgs -> Gen Bool
