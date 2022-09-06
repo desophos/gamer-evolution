@@ -157,13 +157,11 @@ graphEvolveFitness = do
         [Range 0 (int2Float $ length avgRun - 1), Step 1]
         ((avgRun !!) . float2Int)
   where
-    avgFit :: [Agent a] -> Float
-    avgFit = combineWith (/) [sum . map agentFitness, realToFrac . length]
-    mergeRuns :: [[Float]] -> [Float]
+    reps   = 100
+    game   = playGame dilemma reps
+    avgFit = (/ int2Float reps)
+        . combineWith (/) [sum . map agentFitness, realToFrac . length]
     mergeRuns = foldl1' (zipWith (\x y -> (x + y) / 2))
-    game      = playGame dilemma 5
-    genCollectEvolve
-        :: GamerParams -> EvolutionParams -> Gen [[Agent [PlayerState]]]
     genCollectEvolve gParams eParams@EvolutionParams {..} = do
         pop <- genPlayers gParams { gamerActions = 2 } evolvePopSize
         collectEvolve eParams game matchup pop
