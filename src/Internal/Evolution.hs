@@ -50,7 +50,7 @@ instance Arbitrary EvolutionParams where
 data Agent a = Agent
     { agentId      :: !Int
     , agentFitness :: !Float
-    , agentGenome  :: !a
+    , agentPhenome :: !a -- ^ The representation of an Agent's expressed traits, e.g. behavior.
     , agentGenes   :: ![Word8] -- ^ The possible characters that make up the encoded genome. Length should be >= 2.
     , agentEncoder :: !(a -> B.ByteString)
     , agentDecoder :: !(B.ByteString -> a)
@@ -63,7 +63,7 @@ instance Ord (Agent a) where
     x <= y = agentId x <= agentId y
 instance Arbitrary (Agent [Word8]) where
     -- ByteString has no Arbitrary instance so use [Word8] instead.
-    -- Restricting the genome to [Word8] provides enough complexity for evolution
+    -- Restricting the phenome to [Word8] provides enough complexity for evolution
     -- and lets us use a trivial encoder/decoder instead of generating functions.
     arbitrary = do
         let agentId      = 0
@@ -72,15 +72,15 @@ instance Arbitrary (Agent [Word8]) where
             agentDecoder = B.unpack
         agentGenes <- arbitrary
             `suchThat` combineWith (&&) [unique, (> 1) . length]
-        numGenes    <- chooseInt (2, 30)
-        agentGenome <- vectorOf numGenes (elements agentGenes)
+        numGenes     <- chooseInt (2, 30)
+        agentPhenome <- vectorOf numGenes (elements agentGenes)
         return Agent { .. }
 
 
 genAgentLike :: Agent [Word8] -> Gen (Agent [Word8])
 genAgentLike agent@Agent {..} = do
-    agentGenome' <- vectorOf (length agentGenome) (elements agentGenes)
-    return agent { agentId = agentId + 1, agentGenome = agentGenome' }
+    agentPhenome' <- vectorOf (length agentPhenome) (elements agentGenes)
+    return agent { agentId = agentId + 1, agentPhenome = agentPhenome' }
 
 
 -- trivial helper functions
@@ -90,8 +90,8 @@ withId x i = x { agentId = i }
 withFitness :: Agent a -> Float -> Agent a
 withFitness x i = x { agentFitness = i }
 
-encodeGenome :: Agent a -> B.ByteString
-encodeGenome Agent {..} = agentEncoder agentGenome
+genomeOf :: Agent a -> B.ByteString
+genomeOf Agent {..} = agentEncoder agentPhenome
 
 
 -- | Merges agents by ID, averaging fitness.
@@ -107,7 +107,7 @@ getFitness
     -> [Agent a] -- ^ The population with updated agentFitness.
 getFitness f = mergeAgents . concatMap applyScores
   where
-    getScores = f . map agentGenome
+    getScores = f . map agentPhenome
     applyScores xs = zipWith withFitness xs (getScores xs)
 
 
@@ -118,7 +118,7 @@ avgFitness = combineWith (/) [sum . map agentFitness, realToFrac . length]
 
 newAgent
     :: (a -> B.ByteString) -> (B.ByteString -> a) -> [Word8] -> a -> Agent a
-newAgent agentEncoder agentDecoder agentGenes agentGenome = Agent { .. }
+newAgent agentEncoder agentDecoder agentGenes agentPhenome = Agent { .. }
   where
     agentId      = 0
     agentFitness = 0
@@ -128,12 +128,12 @@ newAgent agentEncoder agentDecoder agentGenes agentGenome = Agent { .. }
 genPopulation
     :: Int -- ^ Number of agents to generate.
     -> [Word8] -- ^ Possible genes that make up the encoded genome.
-    -> (a -> B.ByteString) -- ^ Encodes an agent's genome.
-    -> (B.ByteString -> a) -- ^ Decodes an agent's genome. Should invert the encoder.
-    -> Gen a -- ^ Genome generator.
+    -> (a -> B.ByteString) -- ^ Encodes an agent's phenome into its genome.
+    -> (B.ByteString -> a) -- ^ Decodes an agent's genome into its phenome. Should invert the encoder.
+    -> Gen a -- ^ Phenome generator.
     -> Gen [Agent a]
-genPopulation n genes enc dec genome = do
-    let agent = newAgent enc dec genes <$> genome
+genPopulation n genes enc dec genPhenome = do
+    let agent = newAgent enc dec genes <$> genPhenome
     agents <- vectorOf n agent
     return $ zipWith withId agents [0 ..]
 
@@ -157,11 +157,10 @@ crossover EvolutionParams {..} x y = do
     let encoder   = agentEncoder x
         decoder   = agentDecoder x
         genes     = agentGenes x
-        encoded   = encoder . agentGenome
-        part1     = flip B.take (encoded x)
-        part2     = flip B.drop (encoded y)
+        part1     = flip B.take (genomeOf x)
+        part2     = flip B.drop (genomeOf y)
         combineAt = combineWith (<>) [part1, part2]
-    crosspoint <- chooseInt64 (1, B.length (encoded x) - 1)
+    crosspoint <- chooseInt64 (1, B.length (genomeOf x) - 1)
     mutated    <- mutate evolveMutateP genes (combineAt crosspoint)
     return $ newAgent encoder decoder genes (decoder mutated)
 

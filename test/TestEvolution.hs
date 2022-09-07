@@ -127,24 +127,22 @@ prop_mutateProducesCorrectProportion (MutateArgs (p, genes, genome)) = do
 prop_crossoverPreservesLength :: CrossoverArgs -> Gen Bool
 prop_crossoverPreservesLength (CrossoverArgs (params, a1, a2)) = do
     a' <- crossover params a1 a2
-    let genomeLengthA' = genomeLength a'
     return
-        $  genomeLengthA'
+        $  genomeLength a'
         == genomeLength a1
-        && genomeLengthA'
+        && genomeLength a'
         == genomeLength a2
-    where genomeLength = B.length . encodeGenome
+    where genomeLength = B.length . genomeOf
 
 -- | Crossover should produce a genome that starts with the first gene from the first parent and ends with the last gene from the second parent.
 prop_crossoverIsHalfAndHalf :: CrossoverArgs -> Gen Bool
 prop_crossoverIsHalfAndHalf (CrossoverArgs (params, a1, a2)) = do
     a' <- crossover params a1 a2
-    let genome' = encodeGenome a'
     return
-        $  B.head genome'
-        == B.head (encodeGenome a1)
-        && B.last genome'
-        == B.last (encodeGenome a2)
+        $  B.head (genomeOf a')
+        == B.head (genomeOf a1)
+        && B.last (genomeOf a')
+        == B.last (genomeOf a2)
 
 
 -- | Reproduction should preserve population size.

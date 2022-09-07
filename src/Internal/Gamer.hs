@@ -26,7 +26,7 @@ import           Util
 
 data GamerParams = GamerParams
     { gamerActions :: !Int -- ^ number of possible actions a player can take
-    , gamerStates  :: !Int -- ^ number of states in a player's genome
+    , gamerStates  :: !Int -- ^ number of states in a player's phenome
     , gamerMemory  :: !Int -- ^ how many rounds back a player will remember its opponent's actions
     }
     deriving (Eq, Show)
@@ -209,9 +209,9 @@ stepPlayer
     :: Player -- ^ The FSM player.
     -> [Int] -- ^ The opponent's previous actions.
     -> State PlayerState Int
-stepPlayer genome opponentHistory = do
+stepPlayer player opponentHistory = do
     oldState <- get
-    let next = nextState genome oldState opponentHistory
+    let next = nextState player oldState opponentHistory
     put next
     return $ stateAction next
 
